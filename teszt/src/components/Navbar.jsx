@@ -3,8 +3,8 @@ export default function Navbar({ onLoginClick, isLoggedIn, username, onLogout })
 <header>
         <div className="container">
             <div className="left-nav">
-                <a href="/" className="logo">Piactér</a>
-                <a href="#news" className="logo">Hírek</a>
+                <a href="/" className="logo home">Piactér</a>
+                <a href="#news" className="logo news-link">Hírek</a>
             </div>
             
             
