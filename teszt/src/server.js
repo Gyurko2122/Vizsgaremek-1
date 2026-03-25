@@ -14,12 +14,13 @@ console.log("Server.js - Starting initialization...");
 // --- Middleware Beállítások ---
 app.use(cors());
 app.use(express.json());
+app.set("trust proxy", 1);
 
 // CSP Header beállítása - engedékeny biztonsági politika
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:3000; font-src 'self' data:",
+    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:3000 https://vizsga-ic7v.onrender.com; font-src 'self' data:",
   );
   next();
 });
