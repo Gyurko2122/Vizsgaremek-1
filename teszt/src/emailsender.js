@@ -20,6 +20,17 @@ function sendEmail(email) {
     to: email,
     subject: "Email Verification - PiacTer",
     html: fs.readFileSync(path.join("./layout/layout.html"), "utf8"),
+    attachments: [
+      {
+        content: fs
+          .readFileSync(path.join("./layout/welcome.png"))
+          .toString("base64"),
+        filename: "welcome.png",
+        type: "image/png",
+        disposition: "inline",
+        content_id: "piacterimg",
+      },
+    ],
   };
 
   sgMail
