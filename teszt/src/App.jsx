@@ -1,84 +1,217 @@
-
-import { useState, useEffect } from 'react'
-import './App.css'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import Body from './components/Body'
-import LoginBody from './components/LoginBody'
-import RegisterBody from './components/RegisterBody'
+import { useState, useEffect } from "react";
+import "./App.css";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Body from "./components/Body";
+import ProductDetail from "./components/ProductDetail";
+import LoginBody from "./components/LoginBody";
+import RegisterBody from "./components/RegisterBody";
+import Profile from "./components/Profile";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
+  const [showProductDetail, setShowProductDetail] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+
+  // localStorage-ből töltjük be a bejelentkezési adatokat
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("username");
+    const savedIsLoggedIn = localStorage.getItem("isLoggedIn");
+
+    if (savedIsLoggedIn === "true" && savedUsername) {
+      setIsLoggedIn(true);
+      setUsername(savedUsername);
+    }
+  }, []);
 
   useEffect(() => {
     if (showLogin || showRegister) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'auto';
-    } 
+      document.body.style.overflow = "auto";
+    }
     return () => {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = "auto";
     };
   }, [showLogin, showRegister]);
 
   const handleLoginSuccess = (user) => {
     setIsLoggedIn(true);
     setUsername(user);
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("username", user);
     setShowLogin(false);
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setUsername('');
+    setUsername("");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("username");
   };
+
+  // Handle profile navigation via pathname
+  useEffect(() => {
+    const handlePathChange = () => {
+      const path = window.location.pathname;
+
+      if (path === "/profile" && isLoggedIn) {
+        setShowProfile(true);
+        setShowProductDetail(false);
+      } else if (path.startsWith("/product/")) {
+        const productId = path.split("/product/")[1];
+        setSelectedProductId(productId);
+        setShowProductDetail(true);
+        setShowProfile(false);
+      } else {
+        setShowProfile(false);
+        setShowProductDetail(false);
+      }
+    };
+
+    // Check on initial load
+    handlePathChange();
+
+    window.addEventListener("popstate", handlePathChange);
+    return () => window.removeEventListener("popstate", handlePathChange);
+  }, [isLoggedIn]);
+
+  // Handle /profile navigation
+  const navigateToProfile = () => {
+    window.history.pushState(null, "", "/profile");
+    setShowProfile(true);
+  };
+
+  const navigateHome = () => {
+    window.history.pushState(null, "", "/");
+    setShowProfile(false);
+  };
+
+  // Handle product detail navigation
+  const navigateToProductDetail = (productId) => {
+    window.history.pushState(null, "", `/product/${productId}`);
+    setSelectedProductId(productId);
+    setShowProductDetail(true);
+  };
+
+  const navigateFromProductDetail = () => {
+    window.history.pushState(null, "", "/");
+    setShowProductDetail(false);
+    setSelectedProductId(null);
+  };
+
+  if (showProfile && isLoggedIn) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+        />
+        <Profile
+          username={username}
+          onBack={() => {
+            window.history.pushState(null, "", "/");
+            setShowProfile(false);
+          }}
+        />
+        <Footer />
+      </div>
+    );
+  }
+
+  if (showProductDetail && selectedProductId) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+        />
+        <div style={{ flex: 1 }}>
+          <ProductDetail
+            productId={selectedProductId}
+            onBack={navigateFromProductDetail}
+            isLoggedIn={isLoggedIn}
+            currentUser={username}
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navbar 
+    <div
+      style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+    >
+      <Navbar
         onLoginClick={() => setShowLogin(true)}
         isLoggedIn={isLoggedIn}
         username={username}
         onLogout={handleLogout}
+        onProfileClick={navigateToProfile}
       />
-       
+
       <div>
         {showLogin && (
-        <div className="modal-overlay" onClick={() => setShowLogin(false)}>
-          <div className="modal-window" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowLogin(false)}>×</button>
-            <LoginBody 
-              onRegisterClick={() => {
-                setShowLogin(false);
-                setShowRegister(true);
-              }}
-              onLoginSuccess={handleLoginSuccess}
-            />
+          <div className="modal-overlay" onClick={() => setShowLogin(false)}>
+            <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="modal-close"
+                onClick={() => setShowLogin(false)}
+              >
+                ×
+              </button>
+              <LoginBody
+                onRegisterClick={() => {
+                  setShowLogin(false);
+                  setShowRegister(true);
+                }}
+                onLoginSuccess={handleLoginSuccess}
+              />
+            </div>
           </div>
-      </div>
-      )}
-      {showRegister && (
-        <div className="modal-overlay" onClick={() => setShowRegister(false)}>
-          <div className="modal-window" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowRegister(false)}>×</button>
-            <RegisterBody onLoginClick={() => {
-              setShowRegister(false);
-              setShowLogin(true);
-            }} />
+        )}
+        {showRegister && (
+          <div className="modal-overlay" onClick={() => setShowRegister(false)}>
+            <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="modal-close"
+                onClick={() => setShowRegister(false)}
+              >
+                ×
+              </button>
+              <RegisterBody
+                onLoginClick={() => {
+                  setShowRegister(false);
+                  setShowLogin(true);
+                }}
+              />
+            </div>
           </div>
-      </div>
-      )}
+        )}
       </div>
 
       <div style={{ flex: 1 }}>
-        <Body />
+        <Body onProductClick={navigateToProductDetail} />
       </div>
 
       <Footer />
     </div>
-    
-  )
+  );
 }
 
-export default App
+export default App;
