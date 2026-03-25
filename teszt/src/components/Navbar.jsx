@@ -7,6 +7,7 @@ export default function Navbar({
   onLogout,
   onProfileClick,
   onMessagesClick,
+  onFavoritesClick,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -26,6 +27,13 @@ export default function Navbar({
     setDropdownOpen(false);
     if (onMessagesClick) {
       onMessagesClick();
+    }
+  };
+
+  const handleFavoritesClick = () => {
+    setDropdownOpen(false);
+    if (onFavoritesClick) {
+      onFavoritesClick();
     }
   };
 
@@ -80,6 +88,12 @@ export default function Navbar({
                   >
                     Üzenetek
                   </a>
+                  <button
+                    className="dropdown-item"
+                    onClick={handleFavoritesClick}
+                  >
+                    ★ Kedvencek
+                  </button>
                   <button
                     className="dropdown-item logout-item"
                     onClick={handleLogout}

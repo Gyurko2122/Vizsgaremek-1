@@ -8,6 +8,7 @@ import LoginBody from "./components/LoginBody";
 import RegisterBody from "./components/RegisterBody";
 import Profile from "./components/Profile";
 import Messages from "./components/Messages";
+import Favorites from "./components/Favorites";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -19,6 +20,7 @@ function App() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showMessages, setShowMessages] = useState(false);
   const [profileUsername, setProfileUsername] = useState(null);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   // localStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -70,6 +72,12 @@ function App() {
         setShowMessages(true);
         setShowProfile(false);
         setShowProductDetail(false);
+        setShowFavorites(false);
+      } else if (path === "/favorites" && isLoggedIn) {
+        setShowFavorites(true);
+        setShowProfile(false);
+        setShowProductDetail(false);
+        setShowMessages(false);
       } else if (path.startsWith("/product/")) {
         const productId = path.split("/product/")[1];
         setSelectedProductId(productId);
@@ -80,6 +88,7 @@ function App() {
         setShowProfile(false);
         setShowProductDetail(false);
         setShowMessages(false);
+        setShowFavorites(false);
       }
     };
 
@@ -98,12 +107,14 @@ function App() {
     setShowProfile(true);
     setShowMessages(false);
     setShowProductDetail(false);
+    setShowFavorites(false);
   };
 
   const navigateHome = () => {
     window.history.pushState(null, "", "/");
     setShowProfile(false);
     setShowMessages(false);
+    setShowFavorites(false);
   };
 
   // Handle product detail navigation
@@ -125,6 +136,15 @@ function App() {
     setShowMessages(true);
     setShowProfile(false);
     setShowProductDetail(false);
+    setShowFavorites(false);
+  };
+
+  const navigateToFavorites = () => {
+    window.history.pushState(null, "", "/favorites");
+    setShowFavorites(true);
+    setShowProfile(false);
+    setShowProductDetail(false);
+    setShowMessages(false);
   };
 
   if (showMessages && isLoggedIn) {
@@ -139,6 +159,7 @@ function App() {
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
         />
         <Messages
           username={username}
@@ -164,6 +185,7 @@ function App() {
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
         />
         <Profile
           username={profileUsername || username}
@@ -185,6 +207,35 @@ function App() {
     );
   }
 
+  if (showFavorites && isLoggedIn) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
+        />
+        <div style={{ flex: 1 }}>
+          <Favorites
+            username={username}
+            onProductClick={navigateToProductDetail}
+            onClose={() => {
+              window.history.pushState(null, "", "/");
+              setShowFavorites(false);
+            }}
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (showProductDetail && selectedProductId) {
     return (
       <div
@@ -197,6 +248,7 @@ function App() {
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
         />
         <div style={{ flex: 1 }}>
           <ProductDetail
@@ -225,6 +277,7 @@ function App() {
         onLogout={handleLogout}
         onProfileClick={navigateToProfile}
         onMessagesClick={navigateToMessages}
+        onFavoritesClick={navigateToFavorites}
       />
 
       <div>
