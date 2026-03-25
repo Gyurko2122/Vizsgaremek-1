@@ -8,7 +8,9 @@ export default function Body({ onProductClick }) {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("/api/products");
+        // Cache-busting: timestamp hozzáadása az URL-hez
+        const timestamp = Date.now();
+        const response = await fetch(`/api/products?t=${timestamp}`);
         if (!response.ok) {
           throw new Error("Termékek letöltése sikertelen");
         }
@@ -79,7 +81,16 @@ export default function Body({ onProductClick }) {
                       style={{ cursor: "pointer" }}
                     >
                       <div className="product-card-image">
-                        <img src={product.imageUrl} alt={product.productName} />
+                        {/* Lazy loading képekhez */}
+                        <img
+                          src={product.imageUrl}
+                          alt={product.productName}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.src =
+                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect fill='%23ddd' width='300' height='300'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='18' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
                       </div>
                       <div className="product-card-info">
                         <h3 className="product-card-name">
