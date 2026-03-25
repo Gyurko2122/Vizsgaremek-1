@@ -46,12 +46,10 @@ export default function ProductDetail({
     e.preventDefault();
 
     if (!messageText.trim()) {
-      alert("Kérjük, írjon üzenetet");
       return;
     }
 
     if (!isLoggedIn) {
-      alert("Kérjük, jelentkezzen be az üzenet küldéséhez");
       return;
     }
 

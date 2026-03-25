@@ -78,8 +78,6 @@ export default function Profile({ username, onBack }) {
         setTimeout(() => {
           fetchUserData();
         }, 500);
-
-        alert("Profilkép sikeresen feltöltve!");
       } else {
         const errorData = await response.json();
         alert(`Hiba: ${errorData.error}`);
@@ -104,7 +102,6 @@ export default function Profile({ username, onBack }) {
 
       if (response.ok) {
         setUserAds(userAds.filter((ad) => ad._id !== productId));
-        alert("Hirdetés sikeresen törölve!");
       } else {
         alert("Hiba a hirdetés törlésénél!");
       }
@@ -309,7 +306,6 @@ function NewAdForm({ username, onAdCreated }) {
       !formData.price ||
       !formData.imageFile
     ) {
-      alert("Kérjük, töltsd ki az összes mezőt és válassz képet!");
       return;
     }
 
@@ -357,7 +353,6 @@ function NewAdForm({ username, onAdCreated }) {
       });
 
       if (productResponse.ok) {
-        alert("Hirdetés sikeresen létrehozva!");
         setFormData({
           productName: "",
           description: "",
@@ -492,7 +487,6 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
       !formData.location ||
       !formData.price
     ) {
-      alert("Kérjük, töltsd ki az összes mezőt!");
       return;
     }
 
@@ -514,7 +508,6 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
       });
 
       if (response.ok) {
-        alert("Hirdetés sikeresen frissítve!");
         onAdUpdated();
       } else {
         const errorData = await response.json();
