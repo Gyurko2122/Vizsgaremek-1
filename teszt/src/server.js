@@ -319,16 +319,9 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   }
 });
 
-app.get("/register", (req, res) => {
-  res.sendFile(path.join(__dirname, "src", "AuthPage.jsx"));
-});
-
-app.get("/profile", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public", "profile-page.html"));
-});
-
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+// SPA Fallback - serve index.html for any unmatched routes (React Router)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
 // --- Szerver Indítása ---
