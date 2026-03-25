@@ -19,9 +19,7 @@ export default function ProductDetail({
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/products/${productId}`,
-        );
+        const response = await fetch(`/api/products/${productId}`);
         if (!response.ok) {
           throw new Error("Termék nem található");
         }
@@ -55,7 +53,7 @@ export default function ProductDetail({
 
     setMessageSending(true);
     try {
-      const response = await fetch("http://localhost:3000/api/messages", {
+      const response = await fetch("/api/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
