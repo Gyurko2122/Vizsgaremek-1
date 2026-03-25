@@ -1981,20 +1981,14 @@ article,
    ============================================ */
 
 .edit-ad-form {
-  background-color: #f8f9fa;
-  border: 2px solid #007bff;
+  background-color: #1a2332;
+  border: 1px solid #334155;
   border-radius: 8px;
   padding: 2rem;
   margin-top: 2rem;
   margin-bottom: 2rem;
   display: grid;
   gap: 1.5rem;
-}
-
-/* Override dark mode for edit form */
-.edit-ad-form {
-  background-color: #1a2332 !important;
-  border: 2px solid #2563eb !important;
 }
 
 .edit-ad-form h3 {
