@@ -320,7 +320,7 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
 });
 
 // SPA Fallback - serve index.html for any unmatched routes (React Router)
-app.get("*", (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
