@@ -548,18 +548,13 @@ app.get("/api/conversations/:username", async (req, res) => {
       .sort({ timestamp: -1 })
       .lean();
 
-    // Csoportosítás partner + productName alapján
+    // Csoportosítás partner alapján (1 user = 1 beszélgetés)
     const conversationMap = new Map();
     for (const msg of messages) {
       const partner = msg.fromUser === username ? msg.toUser : msg.fromUser;
-      const key = `${partner}_${msg.productName || "general"}`;
-      if (!conversationMap.has(key)) {
+      if (!conversationMap.has(partner)) {
         const unreadCount = messages.filter(
-          (m) =>
-            m.toUser === username &&
-            m.fromUser === partner &&
-            (m.productName || "general") === (msg.productName || "general") &&
-            !m.isRead,
+          (m) => m.toUser === username && m.fromUser === partner && !m.isRead,
         ).length;
 
         // Lekérjük a partner profilképét
@@ -573,11 +568,25 @@ app.get("/api/conversations/:username", async (req, res) => {
           // ignore
         }
 
-        conversationMap.set(key, {
+        // Összegyűjtjük az érdeklődési termékeket
+        const productNames = [
+          ...new Set(
+            messages
+              .filter(
+                (m) =>
+                  (m.fromUser === partner || m.toUser === partner) &&
+                  m.productName,
+              )
+              .map((m) => m.productName),
+          ),
+        ];
+
+        conversationMap.set(partner, {
           partner,
           partnerPicture,
           productId: msg.productId,
           productName: msg.productName,
+          productNames,
           lastMessage: msg.message,
           lastTimestamp: msg.timestamp,
           unreadCount,
@@ -624,38 +633,21 @@ app.put("/api/messages/mark-read", async (req, res) => {
   }
 });
 
-// Üzenetek lekérése két felhasználó között (opcionálisan termékre szűrve)
+// Üzenetek lekérése két felhasználó között
 app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   try {
     const { fromUser, toUser } = req.params;
-    const { productName } = req.query;
 
     if (!fromUser || !toUser) {
       return res.status(400).json({ error: "Hiányzó paraméterek" });
     }
 
-    let query = {
+    const messages = await Message_model.find({
       $or: [
         { fromUser, toUser },
         { fromUser: toUser, toUser: fromUser },
       ],
-    };
-
-    if (productName) {
-      query = {
-        $and: [
-          {
-            $or: [
-              { fromUser, toUser },
-              { fromUser: toUser, toUser: fromUser },
-            ],
-          },
-          { productName },
-        ],
-      };
-    }
-
-    const messages = await Message_model.find(query)
+    })
       .sort({ timestamp: 1 })
       .lean();
 

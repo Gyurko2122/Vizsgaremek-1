@@ -68,9 +68,7 @@ export default function Messages({ username, onClose }) {
         ((message.fromUser === selectedConvRef.current.partner &&
           message.toUser === username) ||
           (message.fromUser === username &&
-            message.toUser === selectedConvRef.current.partner)) &&
-        (message.productName || "general") ===
-          (selectedConvRef.current.productName || "general")
+            message.toUser === selectedConvRef.current.partner))
       ) {
         setChatMessages((prev) => [...prev, message]);
       }
@@ -120,12 +118,7 @@ export default function Messages({ username, onClose }) {
     setView("chat");
 
     try {
-      const params = conv.productName
-        ? `?productName=${encodeURIComponent(conv.productName)}`
-        : "";
-      const response = await fetch(
-        `/api/messages/${username}/${conv.partner}${params}`,
-      );
+      const response = await fetch(`/api/messages/${username}/${conv.partner}`);
       if (response.ok) {
         const data = await response.json();
         setChatMessages(data);
@@ -210,31 +203,6 @@ export default function Messages({ username, onClose }) {
   return (
     <div className="messages-page">
       <div className="messages-wrapper">
-        <div className="messages-top-bar">
-          <button className="messages-top-btn" title="Új üzenet">
-            ✉
-          </button>
-          <button
-            className="messages-top-btn active"
-            title="Beérkezett üzenetek"
-          >
-            📨
-          </button>
-          <button className="messages-top-btn" title="Képek">
-            🖼
-          </button>
-          <button className="messages-top-btn" title="Kapcsolatok">
-            👥
-          </button>
-          <button
-            className="messages-close-btn"
-            onClick={onClose}
-            title="Bezárás"
-          >
-            ✕
-          </button>
-        </div>
-
         <div className="messages-main">
           {/* Left Panel - Conversations */}
           <div className="messages-left-panel">
@@ -259,9 +227,7 @@ export default function Messages({ username, onClose }) {
                   <div
                     key={`${conv.partner}-${conv.productName || idx}`}
                     className={`messages-conv-item ${
-                      selectedConv &&
-                      selectedConv.partner === conv.partner &&
-                      selectedConv.productName === conv.productName
+                      selectedConv && selectedConv.partner === conv.partner
                         ? "active"
                         : ""
                     }`}
@@ -282,8 +248,8 @@ export default function Messages({ username, onClose }) {
                     <div className="messages-conv-info">
                       <div className="messages-conv-name">{conv.partner}</div>
                       <div className="messages-conv-product">
-                        {conv.productName
-                          ? `Érdeklődés: ${conv.productName}`
+                        {conv.productNames && conv.productNames.length > 0
+                          ? `Érdeklődés: ${conv.productNames.join(", ")}`
                           : "Üzenet"}
                       </div>
                     </div>
