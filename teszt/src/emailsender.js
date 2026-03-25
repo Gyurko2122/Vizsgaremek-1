@@ -48,7 +48,4 @@ function sendEmail(email) {
 
 module.exports = {
   sendEmail,
-  upload,
-  readDatabase,
-  writeDatabase,
 };
