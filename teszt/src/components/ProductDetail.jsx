@@ -19,7 +19,11 @@ export default function ProductDetail({
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/products/${productId}`);
+        // Cache-busting: timestamp hozzáadása az URL-hez
+        const timestamp = Date.now();
+        const response = await fetch(
+          `/api/products/${productId}?t=${timestamp}`,
+        );
         if (!response.ok) {
           throw new Error("Termék nem található");
         }
@@ -128,6 +132,11 @@ export default function ProductDetail({
             src={product.imageUrl}
             alt={product.productName}
             className="product-detail-image"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src =
+                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23ddd' width='400' height='400'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
+            }}
           />
         </div>
 

@@ -17,17 +17,24 @@ export default function Profile({ username, onBack }) {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/user/${username}`);
+      // Cache-busting: timestamp hozzáadása az URLhez
+      const timestamp = Date.now();
+      const response = await fetch(`/api/user/${username}?t=${timestamp}`);
       if (response.ok) {
         const data = await response.json();
         setUserEmail(data.email);
         if (data.picture) {
+          // Az URL-ben már van versió, de biztosabb megoldás
           setProfileImage(data.picture);
         }
+      } else {
+        console.error("Error fetching user data:", response.status);
       }
 
-      // Fetch user's products
-      const productsResponse = await fetch(`/api/products/user/${username}`);
+      // Termékleteöltés - szintén cache-bustig-gal
+      const productsResponse = await fetch(
+        `/api/products/user/${username}?t=${timestamp}`,
+      );
       if (productsResponse.ok) {
         const products = await productsResponse.json();
         // Sort by createdAt descending (newest first)
@@ -35,6 +42,8 @@ export default function Profile({ username, onBack }) {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
         );
         setUserAds(sorted);
+      } else {
+        console.error("Error fetching products:", productsResponse.status);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -61,7 +70,14 @@ export default function Profile({ username, onBack }) {
 
       if (response.ok) {
         const data = await response.json();
+        // Force refresh az új URL-lel
         setProfileImage(data.imageUrl);
+
+        // Frissítsd az adatokat az adatbázisból
+        setTimeout(() => {
+          fetchUserData();
+        }, 500);
+
         alert("Profilkép sikeresen feltöltve!");
       } else {
         const errorData = await response.json();
@@ -106,7 +122,14 @@ export default function Profile({ username, onBack }) {
 
         <div className="profile-card">
           <div className="profile-header">
-            <img id="profile-image" src={profileImage} alt={username} />
+            <img
+              id="profile-image"
+              src={profileImage}
+              alt={username}
+              onError={(e) => {
+                e.target.src = "https://via.placeholder.com/150";
+              }}
+            />
             <div className="profile-info">
               <h1 id="profile-username">{username}</h1>
               <p id="profile-email">{userEmail}</p>
@@ -149,7 +172,15 @@ export default function Profile({ username, onBack }) {
               userAds.map((ad) => (
                 <div key={ad._id} className="ad-card">
                   <div className="ad-card-image-container">
-                    <img src={ad.imageUrl} alt={ad.productName} />
+                    <img
+                      src={ad.imageUrl}
+                      alt={ad.productName}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.src =
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ddd' width='200' height='200'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
                   </div>
                   <div className="ad-card-info">
                     <h3>{ad.productName}</h3>
@@ -277,7 +308,7 @@ function NewAdForm({ username, onAdCreated }) {
           description: formData.description,
           location: formData.location,
           price: parseFloat(formData.price),
-          imageUrl: imageData.imageUrl,
+          imageUrl: imageData.imageUrl, // Az URL már tartalmaz cache-buste (timestamp)
         }),
       });
 
