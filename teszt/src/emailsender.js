@@ -1,4 +1,6 @@
 const sgMail = require("@sendgrid/mail");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -17,18 +19,7 @@ function sendEmail(email) {
     },
     to: email,
     subject: "Email Verification - PiacTer",
-    html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-        <h2 style="color: #333;">Welcome to PiacTer!</h2>
-        <p>Thank you for signing up. To complete your registration and start enjoying our services, please verify your email address using one of the methods below. Both options are valid for 10 minutes.</p>
-        
-       
-        
-        
-        <p style="color: #666; font-size: 14px;">If you didn't create an account with PiacTer, please ignore this email.</p>
-        
-        <p>Thank you for joining us!</p>
-        <p>Best regards,<br>The PiacTer Team</p>
-        </div>`,
+    html: fs.readFileSync(path.join(__dirname, "layout.html"), "utf8"),
   };
 
   sgMail
