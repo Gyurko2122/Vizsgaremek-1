@@ -17,6 +17,7 @@ export default function ProductDetail({
   onBack,
   isLoggedIn,
   currentUser,
+  onSellerClick,
 }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ export default function ProductDetail({
   const [messageText, setMessageText] = useState("");
   const [messageSending, setMessageSending] = useState(false);
   const [messageSuccess, setMessageSuccess] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Termék adatainak lekérése
   useEffect(() => {
@@ -139,16 +141,46 @@ export default function ProductDetail({
 
       <div className="product-detail-content">
         <div className="product-image-wrapper">
-          <img
-            src={fixImageUrl(product.imageUrl)}
-            alt={product.productName}
-            className="product-detail-image"
-            loading="lazy"
-            onError={(e) => {
-              e.target.src =
-                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23ddd' width='400' height='400'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
-            }}
-          />
+          {(() => {
+            const images =
+              product.images && product.images.length > 0
+                ? product.images
+                : product.imageUrl
+                  ? [product.imageUrl]
+                  : [];
+            return (
+              <>
+                <img
+                  src={fixImageUrl(
+                    images[currentImageIndex] || product.imageUrl,
+                  )}
+                  alt={product.productName}
+                  className="product-detail-image"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.src =
+                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23ddd' width='400' height='400'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
+                  }}
+                />
+                {images.length > 1 && (
+                  <div className="product-image-thumbnails">
+                    {images.map((img, index) => (
+                      <img
+                        key={index}
+                        src={fixImageUrl(img)}
+                        alt={`${product.productName} ${index + 1}`}
+                        className={`thumbnail ${index === currentImageIndex ? "active" : ""}`}
+                        onClick={() => setCurrentImageIndex(index)}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <div className="product-info">
@@ -166,7 +198,13 @@ export default function ProductDetail({
 
           <div className="product-seller">
             <span className="seller-label">Eladó:</span>
-            <span className="seller-name">{product.createdBy}</span>
+            <span
+              className="seller-name seller-link"
+              onClick={() => onSellerClick && onSellerClick(product.createdBy)}
+              style={{ cursor: onSellerClick ? "pointer" : "default" }}
+            >
+              {product.createdBy}
+            </span>
           </div>
 
           <div className="product-date">

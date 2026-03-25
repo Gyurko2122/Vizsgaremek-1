@@ -7,7 +7,12 @@ const http = require("http");
 const { Server } = require("socket.io");
 const login = require("./login");
 const register = require("./register");
-const { Users_model, Products_model, Message_model } = require("./database");
+const {
+  Users_model,
+  Products_model,
+  Message_model,
+  Favorite_model,
+} = require("./database");
 const { sendEmail, sendMessageNotification } = require("./emailsender");
 const app = express();
 const server = http.createServer(app);
@@ -323,8 +328,15 @@ app.get("/api/products/user/:username", async (req, res) => {
 // Új termék létrehozása
 app.post("/api/products", async (req, res) => {
   try {
-    const { username, productName, description, location, price, imageUrl } =
-      req.body;
+    const {
+      username,
+      productName,
+      description,
+      location,
+      price,
+      imageUrl,
+      images,
+    } = req.body;
 
     if (
       !username ||
@@ -332,20 +344,24 @@ app.post("/api/products", async (req, res) => {
       !description ||
       !location ||
       !price ||
-      !imageUrl
+      (!imageUrl && (!images || images.length === 0))
     ) {
       return res.status(400).json({
         error:
-          "Hiányzó mezők: username, productName, description, location, price, imageUrl",
+          "Hiányzó mezők: username, productName, description, location, price, imageUrl/images",
       });
     }
+
+    const allImages =
+      images && images.length > 0 ? images : imageUrl ? [imageUrl] : [];
 
     const newProduct = new Products_model({
       productName: productName.trim(),
       description: description.trim(),
       location: location.trim(),
       price: parseFloat(price),
-      imageUrl: imageUrl.trim(),
+      imageUrl: allImages[0] || (imageUrl ? imageUrl.trim() : ""),
+      images: allImages,
       createdBy: username.trim(),
       createdAt: new Date(),
     });
@@ -396,10 +412,53 @@ app.post(
   },
 );
 
+// Több termékkép feltöltése egyszerre
+const uploadMultipleProductImagesHandler = (req, res, next) => {
+  uploadProductImg.array("files", 10)(req, res, (err) => {
+    if (err) {
+      console.error("Multer error:", err);
+      return res
+        .status(400)
+        .json({ error: err.message || "Kép feltöltési hiba" });
+    }
+    next();
+  });
+};
+
+app.post(
+  "/api/upload/product-images",
+  uploadMultipleProductImagesHandler,
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: "Nincsenek fájlok feltöltve" });
+      }
+
+      const timestamp = Date.now();
+      const imageUrls = req.files.map(
+        (file) => `/uploads/product-images/${file.filename}?v=${timestamp}`,
+      );
+      console.log("Product images uploaded:", imageUrls);
+      res.json({ imageUrls });
+    } catch (error) {
+      console.error("Error uploading product images:", error);
+      res.status(500).json({ error: "Szerver hiba" });
+    }
+  },
+);
+
 // Termék szerkesztése
 app.put("/api/products/:id", async (req, res) => {
   try {
-    const { username, productName, description, location, price } = req.body;
+    const {
+      username,
+      productName,
+      description,
+      location,
+      price,
+      imageUrl,
+      images,
+    } = req.body;
 
     if (!username) {
       return res.status(400).json({ error: "Felhasználónév hiányzik" });
@@ -422,15 +481,24 @@ app.put("/api/products/:id", async (req, res) => {
       return res.status(400).json({ error: "Hiányzó mezők" });
     }
 
+    const updateData = {
+      productName: productName.trim(),
+      description: description.trim(),
+      location: location.trim(),
+      price: parseFloat(price),
+    };
+
+    if (images && images.length > 0) {
+      updateData.images = images;
+      updateData.imageUrl = images[0];
+    } else if (imageUrl) {
+      updateData.imageUrl = imageUrl.trim();
+    }
+
     // Frissítés
     const updatedProduct = await Products_model.findByIdAndUpdate(
       req.params.id,
-      {
-        productName: productName.trim(),
-        description: description.trim(),
-        location: location.trim(),
-        price: parseFloat(price),
-      },
+      updateData,
       { new: true },
     );
 
@@ -655,6 +723,111 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   } catch (error) {
     console.error("Error fetching messages:", error);
     res.status(500).json({ error: "Szerver hiba az üzenetek lekérésekor" });
+  }
+});
+
+// --- FAVORITE ENDPOINTS ---
+
+// Felhasználó fiók törlése
+app.delete("/api/user/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { confirmUsername } = req.body;
+
+    if (!confirmUsername || confirmUsername !== username) {
+      return res
+        .status(400)
+        .json({ error: "Felhasználónév megerősítés szükséges" });
+    }
+
+    const user = await Users_model.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+
+    // Töröljük a felhasználó termékeit
+    await Products_model.deleteMany({ createdBy: username });
+
+    // Töröljük a kedvenceket
+    await Favorite_model.deleteMany({ user: user._id });
+
+    // Töröljük az üzeneteket
+    await Message_model.deleteMany({
+      $or: [{ fromUser: username }, { toUser: username }],
+    });
+
+    // Töröljük a felhasználót
+    await Users_model.findByIdAndDelete(user._id);
+
+    res.json({ message: "Fiók sikeresen törölve" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Szerver hiba a fiók törlésénél" });
+  }
+});
+
+// Kedvencek lekérése felhasználónév alapján
+app.get("/api/favorites/:username", async (req, res) => {
+  try {
+    const user = await Users_model.findOne({ username: req.params.username });
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+    const favorites = await Favorite_model.find({ user: user._id }).lean();
+    const productIds = favorites.map((f) => f.product.toString());
+    res.json({ productIds });
+  } catch (error) {
+    console.error("Error fetching favorites:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Kedvenc hozzáadása
+app.post("/api/favorites", async (req, res) => {
+  try {
+    const { username, productId } = req.body;
+    if (!username || !productId) {
+      return res.status(400).json({ error: "Hiányzó mezők" });
+    }
+    const user = await Users_model.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+    const existing = await Favorite_model.findOne({
+      user: user._id,
+      product: productId,
+    });
+    if (existing) {
+      return res.json({ message: "Már kedvenc" });
+    }
+    const fav = new Favorite_model({ user: user._id, product: productId });
+    await fav.save();
+    res.status(201).json({ message: "Kedvencekhez adva" });
+  } catch (error) {
+    console.error("Error adding favorite:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Kedvenc eltávolítása
+app.delete("/api/favorites", async (req, res) => {
+  try {
+    const { username, productId } = req.body;
+    if (!username || !productId) {
+      return res.status(400).json({ error: "Hiányzó mezők" });
+    }
+    const user = await Users_model.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+    await Favorite_model.findOneAndDelete({
+      user: user._id,
+      product: productId,
+    });
+    res.json({ message: "Eltávolítva a kedvencekből" });
+  } catch (error) {
+    console.error("Error removing favorite:", error);
+    res.status(500).json({ error: "Szerver hiba" });
   }
 });
 

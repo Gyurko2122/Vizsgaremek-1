@@ -11,7 +11,12 @@ const fixImageUrl = (url) => {
   return "/" + url;
 };
 
-export default function Profile({ username, onBack }) {
+export default function Profile({
+  username,
+  onBack,
+  isOwnProfile = true,
+  onDeleteAccount,
+}) {
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [profileImage, setProfileImage] = useState(
     "https://via.placeholder.com/150",
@@ -122,6 +127,42 @@ export default function Profile({ username, onBack }) {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        "Biztos, hogy törölni szeretnéd a fiókodat? Ez a művelet NEM visszavonható! Az összes hirdetésed, üzeneted és kedvenced törlődik.",
+      )
+    )
+      return;
+
+    const confirmName = window.prompt(
+      "Kérjük, írd be a felhasználóneved a megerősítéshez:",
+    );
+    if (confirmName !== username) {
+      alert("A felhasználónév nem egyezik. A törlés megszakítva.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/user/${username}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmUsername: username }),
+      });
+
+      if (response.ok) {
+        alert("Fiók sikeresen törölve.");
+        if (onDeleteAccount) onDeleteAccount();
+      } else {
+        const data = await response.json();
+        alert(`Hiba: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("Hiba a fiók törlése során!");
+    }
+  };
+
   return (
     <div className="profile-page">
       <div className="profile-container">
@@ -146,40 +187,55 @@ export default function Profile({ username, onBack }) {
           </div>
 
           <div className="profile-actions">
-            <label htmlFor="profile-upload" className="upload-btn">
-              Profilkép feltöltése
-              <input
-                type="file"
-                id="profile-upload"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleProfileImageUpload}
-              />
-            </label>
-            <button className="delete-btn">Profil törlése</button>
+            {isOwnProfile && (
+              <>
+                <label htmlFor="profile-upload" className="upload-btn">
+                  Profilkép feltöltése
+                  <input
+                    type="file"
+                    id="profile-upload"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleProfileImageUpload}
+                  />
+                </label>
+                <button className="delete-btn" onClick={handleDeleteAccount}>
+                  Profil törlése
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         <div className="user-ads-section">
-          <h2>Saját hirdetéseim</h2>
+          <h2>
+            {isOwnProfile ? "Saját hirdetéseim" : `${username} hirdetései`}
+          </h2>
 
           <div className="ads-grid">
-            {/* New Ad Card - Always First */}
-            <div
-              className="ad-card new-ad-card-container"
-              onClick={() => setShowNewAdForm(!showNewAdForm)}
-            >
-              <div className="new-ad-placeholder">
-                <h3>{showNewAdForm ? "✕ Mégsem" : "+ Új hirdetés"}</h3>
+            {/* New Ad Card - Always First (only own profile) */}
+            {isOwnProfile && (
+              <div
+                className="ad-card new-ad-card-container"
+                onClick={() => setShowNewAdForm(!showNewAdForm)}
+              >
+                <div className="new-ad-placeholder">
+                  <h3>{showNewAdForm ? "✕ Mégsem" : "+ Új hirdetés"}</h3>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Existing Ads - Sorted by Date */}
             {loading ? (
               <p>Hirdetések betöltése...</p>
             ) : userAds.length > 0 ? (
               userAds.map((ad) => (
-                <div key={ad._id} className="ad-card">
+                <div
+                  key={ad._id}
+                  className="ad-card"
+                  onClick={() => isOwnProfile && setEditingAdId(ad._id)}
+                  style={{ cursor: isOwnProfile ? "pointer" : "default" }}
+                >
                   <div className="ad-card-image-container">
                     <img
                       src={fixImageUrl(ad.imageUrl)}
@@ -197,41 +253,31 @@ export default function Profile({ username, onBack }) {
                     <p className="ad-description">{ad.description}</p>
                     <p className="ad-price">{ad.price} Ft</p>
                   </div>
-                  <div
-                    className="ad-card-actions"
-                    style={{ display: "flex", gap: "8px" }}
-                  >
-                    <button
-                      className="ad-edit-btn"
-                      onClick={() => setEditingAdId(ad._id)}
-                      style={{
-                        flex: 1,
-                        padding: "8px",
-                        backgroundColor: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                      }}
+                  {isOwnProfile && (
+                    <div
+                      className="ad-card-actions"
+                      style={{ display: "flex", gap: "8px" }}
                     >
-                      Szerkesztés
-                    </button>
-                    <button
-                      className="ad-delete-btn"
-                      onClick={() => handleDeleteAd(ad._id)}
-                      style={{
-                        flex: 1,
-                        padding: "8px",
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Törlés
-                    </button>
-                  </div>
+                      <button
+                        className="ad-delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAd(ad._id);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "8px",
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Törlés
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -243,22 +289,36 @@ export default function Profile({ username, onBack }) {
             )}
           </div>
 
-          {/* Edit Ad Form */}
+          {/* Edit Ad Modal */}
           {editingAdId && (
-            <EditAdForm
-              username={username}
-              adId={editingAdId}
-              ad={userAds.find((a) => a._id === editingAdId)}
-              onAdUpdated={() => {
-                setEditingAdId(null);
-                fetchUserData();
-              }}
-              onCancel={() => setEditingAdId(null)}
-            />
+            <div className="modal-overlay" onClick={() => setEditingAdId(null)}>
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+                style={{ maxWidth: "550px" }}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setEditingAdId(null)}
+                >
+                  ×
+                </button>
+                <EditAdForm
+                  username={username}
+                  adId={editingAdId}
+                  ad={userAds.find((a) => a._id === editingAdId)}
+                  onAdUpdated={() => {
+                    setEditingAdId(null);
+                    fetchUserData();
+                  }}
+                  onCancel={() => setEditingAdId(null)}
+                />
+              </div>
+            </div>
           )}
 
           {/* New Ad Form */}
-          {showNewAdForm && (
+          {isOwnProfile && showNewAdForm && (
             <NewAdForm
               username={username}
               onAdCreated={() => {
@@ -279,8 +339,8 @@ function NewAdForm({ username, onAdCreated }) {
     description: "",
     location: "",
     price: "",
-    imageFile: null,
-    imagePreview: null,
+    imageFiles: [],
+    imagePreviews: [],
   });
   const [loading, setLoading] = useState(false);
 
@@ -293,18 +353,35 @@ function NewAdForm({ username, onAdCreated }) {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const previews = [];
+    let loaded = 0;
+
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData((prev) => ({
-          ...prev,
-          imageFile: file,
-          imagePreview: reader.result,
-        }));
+        previews.push({ file, preview: reader.result });
+        loaded++;
+        if (loaded === files.length) {
+          setFormData((prev) => ({
+            ...prev,
+            imageFiles: [...prev.imageFiles, ...files],
+            imagePreviews: [...prev.imagePreviews, ...previews],
+          }));
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
+  };
+
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      imageFiles: prev.imageFiles.filter((_, i) => i !== index),
+      imagePreviews: prev.imagePreviews.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -315,7 +392,7 @@ function NewAdForm({ username, onAdCreated }) {
       !formData.description ||
       !formData.location ||
       !formData.price ||
-      !formData.imageFile
+      formData.imageFiles.length === 0
     ) {
       return;
     }
@@ -323,11 +400,13 @@ function NewAdForm({ username, onAdCreated }) {
     setLoading(true);
 
     try {
-      // First upload the image
+      // Upload all images
       const imageFormData = new FormData();
-      imageFormData.append("file", formData.imageFile);
+      formData.imageFiles.forEach((file) => {
+        imageFormData.append("files", file);
+      });
 
-      const imageResponse = await fetch("/api/upload/product-image", {
+      const imageResponse = await fetch("/api/upload/product-images", {
         method: "POST",
         body: imageFormData,
       });
@@ -347,7 +426,7 @@ function NewAdForm({ username, onAdCreated }) {
 
       const imageData = await imageResponse.json();
 
-      // Then create the product with the image URL
+      // Then create the product with the image URLs
       const productResponse = await fetch("/api/products", {
         method: "POST",
         headers: {
@@ -359,7 +438,8 @@ function NewAdForm({ username, onAdCreated }) {
           description: formData.description,
           location: formData.location,
           price: parseFloat(formData.price),
-          imageUrl: imageData.imageUrl, // Az URL már tartalmaz cache-buste (timestamp)
+          imageUrl: imageData.imageUrls[0],
+          images: imageData.imageUrls,
         }),
       });
 
@@ -369,8 +449,8 @@ function NewAdForm({ username, onAdCreated }) {
           description: "",
           location: "",
           price: "",
-          imageFile: null,
-          imagePreview: null,
+          imageFiles: [],
+          imagePreviews: [],
         });
         onAdCreated();
       } else {
@@ -449,18 +529,28 @@ function NewAdForm({ username, onAdCreated }) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="imageFile">Kép feltöltése *</label>
+        <label htmlFor="imageFile">Képek feltöltése * (max 10)</label>
         <input
           type="file"
           id="imageFile"
           accept="image/*"
+          multiple
           onChange={handleFileChange}
-          required
         />
-        {formData.imagePreview && (
-          <div className="image-preview">
-            <img src={formData.imagePreview} alt="Előnézet" />
-            <small>Kiválasztott: {formData.imageFile.name}</small>
+        {formData.imagePreviews.length > 0 && (
+          <div className="multi-image-preview">
+            {formData.imagePreviews.map((item, index) => (
+              <div key={index} className="preview-item">
+                <img src={item.preview} alt={`Előnézet ${index + 1}`} />
+                <button
+                  type="button"
+                  className="remove-preview"
+                  onClick={() => removeImage(index)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -479,6 +569,15 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
     location: ad?.location || "",
     price: ad?.price || "",
   });
+  const [existingImages, setExistingImages] = useState(
+    ad?.images && ad.images.length > 0
+      ? ad.images
+      : ad?.imageUrl
+        ? [ad.imageUrl]
+        : [],
+  );
+  const [newImageFiles, setNewImageFiles] = useState([]);
+  const [newImagePreviews, setNewImagePreviews] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e) => {
@@ -487,6 +586,36 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleNewFiles = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const previews = [];
+    let loaded = 0;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        previews.push({ file, preview: reader.result });
+        loaded++;
+        if (loaded === files.length) {
+          setNewImageFiles((prev) => [...prev, ...files]);
+          setNewImagePreviews((prev) => [...prev, ...previews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeExistingImage = (index) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index) => {
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -504,6 +633,26 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
     setLoading(true);
 
     try {
+      let allImages = [...existingImages];
+
+      // Upload new images if any
+      if (newImageFiles.length > 0) {
+        const imageFormData = new FormData();
+        newImageFiles.forEach((file) => {
+          imageFormData.append("files", file);
+        });
+
+        const imageResponse = await fetch("/api/upload/product-images", {
+          method: "POST",
+          body: imageFormData,
+        });
+
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          allImages = [...allImages, ...imageData.imageUrls];
+        }
+      }
+
       const response = await fetch(`/api/products/${adId}`, {
         method: "PUT",
         headers: {
@@ -515,6 +664,8 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
           description: formData.description,
           location: formData.location,
           price: parseFloat(formData.price),
+          images: allImages.length > 0 ? allImages : undefined,
+          imageUrl: allImages.length > 0 ? allImages[0] : undefined,
         }),
       });
 
@@ -533,17 +684,7 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
   };
 
   return (
-    <form
-      className="edit-ad-form"
-      onSubmit={handleSubmit}
-      style={{
-        backgroundColor: "#f8f9fa",
-        padding: "20px",
-        borderRadius: "8px",
-        marginTop: "20px",
-        border: "2px solid #007bff",
-      }}
-    >
+    <form className="edit-ad-form" onSubmit={handleSubmit}>
       <h3>Hirdetés szerkesztése</h3>
 
       <div className="form-group">
@@ -599,7 +740,50 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
         />
       </div>
 
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+        <label>Képek</label>
+        {existingImages.length > 0 && (
+          <div className="multi-image-preview">
+            {existingImages.map((img, index) => (
+              <div key={`existing-${index}`} className="preview-item">
+                <img src={fixImageUrl(img)} alt={`Kép ${index + 1}`} />
+                <button
+                  type="button"
+                  className="remove-preview"
+                  onClick={() => removeExistingImage(index)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {newImagePreviews.length > 0 && (
+          <div className="multi-image-preview" style={{ marginTop: "0.5rem" }}>
+            {newImagePreviews.map((item, index) => (
+              <div key={`new-${index}`} className="preview-item">
+                <img src={item.preview} alt={`Új kép ${index + 1}`} />
+                <button
+                  type="button"
+                  className="remove-preview"
+                  onClick={() => removeNewImage(index)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleNewFiles}
+          style={{ marginTop: "0.5rem" }}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "10px", gridColumn: "1 / -1" }}>
         <button
           type="submit"
           className="btn-submit-ad"
