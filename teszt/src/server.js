@@ -782,6 +782,27 @@ app.get("/api/favorites/:username", async (req, res) => {
   }
 });
 
+// Kedvenc termékek adatainak lekérése felhasználónév alapján
+app.get("/api/favorites/:username/products", async (req, res) => {
+  try {
+    const user = await Users_model.findOne({ username: req.params.username });
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+    const favorites = await Favorite_model.find({ user: user._id })
+      .sort({ favoritedAt: -1 })
+      .lean();
+    const productIds = favorites.map((f) => f.product);
+    const products = await Products_model.find({
+      _id: { $in: productIds },
+    }).lean();
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching favorite products:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
 // Kedvenc hozzáadása
 app.post("/api/favorites", async (req, res) => {
   try {
