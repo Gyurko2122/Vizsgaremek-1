@@ -243,12 +243,10 @@ app.post("/api/products", async (req, res) => {
       !price ||
       !imageUrl
     ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Hiányzó mezők: username, productName, description, location, price, imageUrl",
-        });
+      return res.status(400).json({
+        error:
+          "Hiányzó mezők: username, productName, description, location, price, imageUrl",
+      });
     }
 
     const newProduct = new Products_model({
@@ -267,11 +265,9 @@ app.post("/api/products", async (req, res) => {
       .json({ message: "Termék sikeresen létrehozva", product: savedProduct });
   } catch (error) {
     console.error("Error creating product:", error);
-    res
-      .status(500)
-      .json({
-        error: "Szerver hiba a termék létrehozásakor: " + error.message,
-      });
+    res.status(500).json({
+      error: "Szerver hiba a termék létrehozásakor: " + error.message,
+    });
   }
 });
 
@@ -310,6 +306,54 @@ app.post(
     }
   },
 );
+
+// Termék szerkesztése
+app.put("/api/products/:id", async (req, res) => {
+  try {
+    const { username, productName, description, location, price } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: "Felhasználónév hiányzik" });
+    }
+
+    const product = await Products_model.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ error: "Termék nem található" });
+    }
+
+    if (product.createdBy !== username) {
+      return res
+        .status(403)
+        .json({ error: "Nincs jogosultságod szerkeszteni ezt a terméket" });
+    }
+
+    // Validáció
+    if (!productName || !description || !location || price === undefined) {
+      return res.status(400).json({ error: "Hiányzó mezők" });
+    }
+
+    // Frissítés
+    const updatedProduct = await Products_model.findByIdAndUpdate(
+      req.params.id,
+      {
+        productName: productName.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        price: parseFloat(price),
+      },
+      { new: true },
+    );
+
+    res.json({
+      message: "Termék sikeresen frissítve",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ error: "Szerver hiba a termék szerkesztésénél" });
+  }
+});
 
 // Termék törlése
 app.delete("/api/products/:id", async (req, res) => {
