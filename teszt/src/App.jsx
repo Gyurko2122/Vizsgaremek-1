@@ -93,6 +93,8 @@ function App() {
   const navigateToProfile = () => {
     window.history.pushState(null, "", "/profile");
     setShowProfile(true);
+    setShowMessages(false);
+    setShowProductDetail(false);
   };
 
   const navigateHome = () => {
