@@ -18,6 +18,7 @@ function App() {
   const [showProductDetail, setShowProductDetail] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showMessages, setShowMessages] = useState(false);
+  const [profileUsername, setProfileUsername] = useState(null);
 
   // localStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -90,8 +91,10 @@ function App() {
   }, [isLoggedIn]);
 
   // Handle /profile navigation
-  const navigateToProfile = () => {
+  const navigateToProfile = (targetUsername) => {
+    const user = targetUsername || username;
     window.history.pushState(null, "", "/profile");
+    setProfileUsername(user);
     setShowProfile(true);
     setShowMessages(false);
     setShowProductDetail(false);
@@ -163,10 +166,18 @@ function App() {
           onMessagesClick={navigateToMessages}
         />
         <Profile
-          username={username}
+          username={profileUsername || username}
+          isOwnProfile={!profileUsername || profileUsername === username}
           onBack={() => {
             window.history.pushState(null, "", "/");
             setShowProfile(false);
+            setProfileUsername(null);
+          }}
+          onDeleteAccount={() => {
+            handleLogout();
+            window.history.pushState(null, "", "/");
+            setShowProfile(false);
+            setProfileUsername(null);
           }}
         />
         <Footer />
@@ -193,6 +204,9 @@ function App() {
             onBack={navigateFromProductDetail}
             isLoggedIn={isLoggedIn}
             currentUser={username}
+            onSellerClick={(sellerUsername) =>
+              navigateToProfile(sellerUsername)
+            }
           />
         </div>
         <Footer />
@@ -254,7 +268,11 @@ function App() {
       </div>
 
       <div style={{ flex: 1 }}>
-        <Body onProductClick={navigateToProductDetail} />
+        <Body
+          onProductClick={navigateToProductDetail}
+          isLoggedIn={isLoggedIn}
+          currentUser={username}
+        />
       </div>
 
       <Footer />

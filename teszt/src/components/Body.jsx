@@ -11,10 +11,11 @@ const fixImageUrl = (url) => {
   return "/" + url;
 };
 
-export default function Body({ onProductClick }) {
+export default function Body({ onProductClick, isLoggedIn, currentUser }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -37,38 +38,57 @@ export default function Body({ onProductClick }) {
     fetchProducts();
   }, []);
 
+  // Fetch user favorites
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+    const fetchFavorites = async () => {
+      try {
+        const response = await fetch(`/api/favorites/${currentUser}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFavorites(new Set(data.productIds));
+        }
+      } catch (err) {
+        console.error("Error fetching favorites:", err);
+      }
+    };
+    fetchFavorites();
+  }, [isLoggedIn, currentUser]);
+
+  const toggleFavorite = async (e, productId) => {
+    e.stopPropagation();
+    if (!isLoggedIn) return;
+
+    const isFav = favorites.has(productId);
+    try {
+      if (isFav) {
+        await fetch("/api/favorites", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: currentUser, productId }),
+        });
+        setFavorites((prev) => {
+          const next = new Set(prev);
+          next.delete(productId);
+          return next;
+        });
+      } else {
+        await fetch("/api/favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: currentUser, productId }),
+        });
+        setFavorites((prev) => new Set(prev).add(productId));
+      }
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
+
   return (
     <main>
-      <div className="carousel-wrapper">
-        <div className="carousel" id="carousel">
-          <button className="carousel-arrow left" id="carousel-left"></button>
-          <img
-            src="img/asd.webp"
-            className="carousel-img"
-            style={{ display: "block" }}
-          />
-          <img
-            src="img/asdasdds.jpg"
-            className="carousel-img"
-            style={{ display: "none" }}
-          />
-          <img
-            src="img/lukas.jpg"
-            className="carousel-img"
-            style={{ display: "none" }}
-          />
-          <img
-            src="img/sor.jpg"
-            className="carousel-img"
-            style={{ display: "none" }}
-          />
-          <img
-            src="img/kezmu.jpg"
-            className="carousel-img"
-            style={{ display: "none" }}
-          />
-          <button className="carousel-arrow right" id="carousel-right"></button>
-        </div>
+      <div className="hero-banner">
+        <img src="img/asd.webp" className="hero-img" alt="Piactér" />
       </div>
       <div className="container">
         <div className="row">
@@ -92,6 +112,19 @@ export default function Body({ onProductClick }) {
                       style={{ cursor: "pointer" }}
                     >
                       <div className="product-card-image">
+                        {isLoggedIn && (
+                          <button
+                            className={`favorite-star ${favorites.has(product._id) ? "active" : ""}`}
+                            onClick={(e) => toggleFavorite(e, product._id)}
+                            title={
+                              favorites.has(product._id)
+                                ? "Eltávolítás a kedvencekből"
+                                : "Kedvencekhez adás"
+                            }
+                          >
+                            {favorites.has(product._id) ? "★" : "☆"}
+                          </button>
+                        )}
                         {/* Lazy loading képekhez */}
                         <img
                           src={fixImageUrl(product.imageUrl)}
