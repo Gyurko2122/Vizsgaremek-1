@@ -150,6 +150,18 @@ export default function ProductDetail({
                   : [];
             return (
               <>
+                {images.length > 1 && (
+                  <button
+                    className="carousel-arrow carousel-arrow-left"
+                    onClick={() =>
+                      setCurrentImageIndex((prev) =>
+                        prev === 0 ? images.length - 1 : prev - 1,
+                      )
+                    }
+                  >
+                    ‹
+                  </button>
+                )}
                 <img
                   src={fixImageUrl(
                     images[currentImageIndex] || product.imageUrl,
@@ -163,17 +175,24 @@ export default function ProductDetail({
                   }}
                 />
                 {images.length > 1 && (
-                  <div className="product-image-thumbnails">
-                    {images.map((img, index) => (
-                      <img
+                  <button
+                    className="carousel-arrow carousel-arrow-right"
+                    onClick={() =>
+                      setCurrentImageIndex((prev) =>
+                        prev === images.length - 1 ? 0 : prev + 1,
+                      )
+                    }
+                  >
+                    ›
+                  </button>
+                )}
+                {images.length > 1 && (
+                  <div className="carousel-dots">
+                    {images.map((_, index) => (
+                      <span
                         key={index}
-                        src={fixImageUrl(img)}
-                        alt={`${product.productName} ${index + 1}`}
-                        className={`thumbnail ${index === currentImageIndex ? "active" : ""}`}
+                        className={`carousel-dot ${index === currentImageIndex ? "active" : ""}`}
                         onClick={() => setCurrentImageIndex(index)}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
                       />
                     ))}
                   </div>

@@ -122,6 +122,9 @@ function App() {
     window.history.pushState(null, "", `/product/${productId}`);
     setSelectedProductId(productId);
     setShowProductDetail(true);
+    setShowFavorites(false);
+    setShowProfile(false);
+    setShowMessages(false);
   };
 
   const navigateFromProductDetail = () => {
