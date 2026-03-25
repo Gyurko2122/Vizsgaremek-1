@@ -16,6 +16,7 @@ export default function Profile({
   onBack,
   isOwnProfile = true,
   onDeleteAccount,
+  onProductClick,
 }) {
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [profileImage, setProfileImage] = useState(DEFAULT_AVATAR);
@@ -231,8 +232,14 @@ export default function Profile({
                 <div
                   key={ad._id}
                   className="ad-card"
-                  onClick={() => isOwnProfile && setEditingAdId(ad._id)}
-                  style={{ cursor: isOwnProfile ? "pointer" : "default" }}
+                  onClick={() => {
+                    if (isOwnProfile) {
+                      setEditingAdId(ad._id);
+                    } else if (onProductClick) {
+                      onProductClick(ad._id);
+                    }
+                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   <div className="ad-card-image-container">
                     <img

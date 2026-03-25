@@ -30,7 +30,7 @@ const formatTime = (timestamp) => {
   });
 };
 
-export default function Messages({ username, onClose }) {
+export default function Messages({ username, onClose, onProfileClick }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -205,7 +205,13 @@ export default function Messages({ username, onClose }) {
       <div className="messages-wrapper">
         <div className="messages-main">
           {/* Close button */}
-          <button className="messages-page-close-btn" onClick={onClose} title="Bezárás">✕</button>
+          <button
+            className="messages-page-close-btn"
+            onClick={onClose}
+            title="Bezárás"
+          >
+            ✕
+          </button>
           {/* Left Panel - Conversations */}
           <div className="messages-left-panel">
             <div className="messages-search-box">
@@ -248,7 +254,17 @@ export default function Messages({ username, onClose }) {
                       }}
                     />
                     <div className="messages-conv-info">
-                      <div className="messages-conv-name">{conv.partner}</div>
+                      <div
+                        className="messages-conv-name"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onProfileClick) onProfileClick(conv.partner);
+                        }}
+                        style={{ cursor: "pointer" }}
+                        title="Profil megtekintése"
+                      >
+                        {conv.partner}
+                      </div>
                       <div className="messages-conv-product">
                         {conv.productNames && conv.productNames.length > 0
                           ? `Érdeklődés: ${conv.productNames.join(", ")}`
