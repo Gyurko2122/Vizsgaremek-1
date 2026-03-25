@@ -75,6 +75,8 @@ export default function ProductDetail({
           fromUser: currentUser,
           toUser: product.createdBy,
           message: messageText,
+          productId: product._id,
+          productName: product.productName,
         }),
       });
 

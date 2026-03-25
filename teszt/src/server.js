@@ -3,11 +3,104 @@ const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
 const fs = require("fs");
+const http = require("http");
+const { Server } = require("socket.io");
 const login = require("./login");
 const register = require("./register");
 const { Users_model, Products_model, Message_model } = require("./database");
+const { sendEmail, sendMessageNotification } = require("./emailsender");
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 const PORT = 3000;
+
+// --- Socket.io felhasználó-kezelés ---
+const onlineUsers = new Map(); // username -> socket.id
+
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("register", (username) => {
+    if (username) {
+      onlineUsers.set(username, socket.id);
+      console.log(`User registered: ${username} -> ${socket.id}`);
+    }
+  });
+
+  socket.on("sendMessage", async (data) => {
+    try {
+      const { fromUser, toUser, message, productId, productName } = data;
+      if (!fromUser || !toUser || !message) return;
+
+      const newMessage = new Message_model({
+        fromUser: fromUser.trim(),
+        toUser: toUser.trim(),
+        message: message.trim(),
+        productId: productId || null,
+        productName: productName || null,
+        timestamp: Date.now(),
+        isRead: false,
+      });
+
+      const savedMessage = await newMessage.save();
+
+      // Küldés a címzettnek ha online
+      const recipientSocketId = onlineUsers.get(toUser);
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("newMessage", savedMessage);
+      }
+
+      // Visszaküldés a feladónak
+      socket.emit("messageSent", savedMessage);
+
+      // Email értesítés küldése
+      try {
+        const toUserData = await Users_model.findOne({ username: toUser });
+        if (toUserData && toUserData.email) {
+          sendMessageNotification(
+            toUserData.email,
+            fromUser,
+            productName || "Üzenet",
+          );
+        }
+      } catch (emailErr) {
+        console.error("Email notification error:", emailErr);
+      }
+    } catch (err) {
+      console.error("Socket sendMessage error:", err);
+      socket.emit("messageError", { error: "Hiba az üzenet küldésénél" });
+    }
+  });
+
+  socket.on("markAsRead", async (data) => {
+    try {
+      const { messageIds } = data;
+      if (messageIds && messageIds.length > 0) {
+        await Message_model.updateMany(
+          { _id: { $in: messageIds } },
+          { isRead: true },
+        );
+      }
+    } catch (err) {
+      console.error("Mark as read error:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    for (const [username, socketId] of onlineUsers.entries()) {
+      if (socketId === socket.id) {
+        onlineUsers.delete(username);
+        console.log(`User disconnected: ${username}`);
+        break;
+      }
+    }
+  });
+});
 
 console.log("Server.js - Starting initialization...");
 
@@ -20,7 +113,7 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:3000 https://vizsga-ic7v.onrender.com; font-src 'self' data:",
+    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:3000 ws://localhost:3000 https://vizsga-ic7v.onrender.com wss://vizsga-ic7v.onrender.com; font-src 'self' data:",
   );
   next();
 });
@@ -385,7 +478,7 @@ app.delete("/api/products/:id", async (req, res) => {
 // Üzenet küldése
 app.post("/api/messages", async (req, res) => {
   try {
-    const { fromUser, toUser, message } = req.body;
+    const { fromUser, toUser, message, productId, productName } = req.body;
 
     if (!fromUser || !toUser || !message) {
       return res
@@ -409,11 +502,33 @@ app.post("/api/messages", async (req, res) => {
       fromUser: fromUser.trim(),
       toUser: toUser.trim(),
       message: message.trim(),
+      productId: productId || null,
+      productName: productName || null,
       timestamp: Date.now(),
       isRead: false,
     });
 
     const savedMessage = await newMessage.save();
+
+    // Socket.io értesítés
+    const recipientSocketId = onlineUsers.get(toUser);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("newMessage", savedMessage);
+    }
+
+    // Email értesítés küldése
+    try {
+      if (toUserExists.email) {
+        sendMessageNotification(
+          toUserExists.email,
+          fromUser,
+          productName || "Üzenet",
+        );
+      }
+    } catch (emailErr) {
+      console.error("Email notification error:", emailErr);
+    }
+
     res
       .status(201)
       .json({ message: "Üzenet sikeresen küldve", messageData: savedMessage });
@@ -423,21 +538,124 @@ app.post("/api/messages", async (req, res) => {
   }
 });
 
-// Üzenetek lekérése két felhasználó között
+// Beszélgetések lekérése egy felhasználóhoz (csoportosítva partner + termék alapján)
+app.get("/api/conversations/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const messages = await Message_model.find({
+      $or: [{ fromUser: username }, { toUser: username }],
+    })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    // Csoportosítás partner + productName alapján
+    const conversationMap = new Map();
+    for (const msg of messages) {
+      const partner = msg.fromUser === username ? msg.toUser : msg.fromUser;
+      const key = `${partner}_${msg.productName || "general"}`;
+      if (!conversationMap.has(key)) {
+        const unreadCount = messages.filter(
+          (m) =>
+            m.toUser === username &&
+            m.fromUser === partner &&
+            (m.productName || "general") === (msg.productName || "general") &&
+            !m.isRead,
+        ).length;
+
+        // Lekérjük a partner profilképét
+        let partnerPicture = null;
+        try {
+          const partnerUser = await Users_model.findOne({ username: partner });
+          if (partnerUser) {
+            partnerPicture = partnerUser.picture || null;
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        conversationMap.set(key, {
+          partner,
+          partnerPicture,
+          productId: msg.productId,
+          productName: msg.productName,
+          lastMessage: msg.message,
+          lastTimestamp: msg.timestamp,
+          unreadCount,
+        });
+      }
+    }
+
+    res.json(Array.from(conversationMap.values()));
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    res.status(500).json({ error: "Szerver hiba a beszélgetések lekérésekor" });
+  }
+});
+
+// Olvasatlan üzenetek száma
+app.get("/api/messages/unread/:username", async (req, res) => {
+  try {
+    const count = await Message_model.countDocuments({
+      toUser: req.params.username,
+      isRead: false,
+    });
+    res.json({ unreadCount: count });
+  } catch (error) {
+    console.error("Error fetching unread count:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Üzenetek olvasottnak jelölése
+app.put("/api/messages/mark-read", async (req, res) => {
+  try {
+    const { messageIds } = req.body;
+    if (!messageIds || messageIds.length === 0) {
+      return res.status(400).json({ error: "Hiányzó messageIds" });
+    }
+    await Message_model.updateMany(
+      { _id: { $in: messageIds } },
+      { isRead: true },
+    );
+    res.json({ message: "Üzenetek olvasottnak jelölve" });
+  } catch (error) {
+    console.error("Error marking messages as read:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Üzenetek lekérése két felhasználó között (opcionálisan termékre szűrve)
 app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   try {
     const { fromUser, toUser } = req.params;
+    const { productName } = req.query;
 
     if (!fromUser || !toUser) {
       return res.status(400).json({ error: "Hiányzó paraméterek" });
     }
 
-    const messages = await Message_model.find({
+    let query = {
       $or: [
         { fromUser, toUser },
         { fromUser: toUser, toUser: fromUser },
       ],
-    })
+    };
+
+    if (productName) {
+      query = {
+        $and: [
+          {
+            $or: [
+              { fromUser, toUser },
+              { fromUser: toUser, toUser: fromUser },
+            ],
+          },
+          { productName },
+        ],
+      };
+    }
+
+    const messages = await Message_model.find(query)
       .sort({ timestamp: 1 })
       .lean();
 
@@ -526,7 +744,7 @@ app.use((req, res) => {
 });
 
 // --- Szerver Indítása ---
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`✅ A Piactér szerver fut a http://localhost:${PORT} címen`);
   console.log("Server.js - Initialization complete!");
 });

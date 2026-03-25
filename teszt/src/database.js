@@ -58,6 +58,8 @@ const MessageSchema = new Schema({
   fromUser: String,
   toUser: String,
   message: String,
+  productId: { type: String, default: null },
+  productName: { type: String, default: null },
   timestamp: { type: Number, default: Date.now },
   isRead: { type: Boolean, default: false },
 });

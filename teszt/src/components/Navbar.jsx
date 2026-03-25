@@ -6,6 +6,7 @@ export default function Navbar({
   username,
   onLogout,
   onProfileClick,
+  onMessagesClick,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -18,6 +19,13 @@ export default function Navbar({
     setDropdownOpen(false);
     if (onProfileClick) {
       onProfileClick();
+    }
+  };
+
+  const handleMessagesClick = () => {
+    setDropdownOpen(false);
+    if (onMessagesClick) {
+      onMessagesClick();
     }
   };
 
@@ -62,7 +70,14 @@ export default function Navbar({
                   >
                     Profilom
                   </button>
-                  <a href="#messages" className="dropdown-item">
+                  <a
+                    href="#messages"
+                    className="dropdown-item"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleMessagesClick();
+                    }}
+                  >
                     Üzenetek
                   </a>
                   <button
