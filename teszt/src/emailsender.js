@@ -1,74 +1,50 @@
-const nodemailer = require("nodemailer");
-const multer = require("multer");
-const fs = require("fs").promises;
-const path = require("path");
+const sgMail = require("@sendgrid/mail");
 require("dotenv").config();
 
-const DB_FILE = "./database.json";
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: process.env.Email_PiacTer,
-    pass: process.env.Password,
-  },
-  connectionTimeout: 5000,
-  socketTimeout: 5000,
-  logger: process.env.NODE_ENV === "development",
-  debug: process.env.NODE_ENV === "development",
-});
+function sendEmail(email) {
+  console.log("=== EMAIL CONFIGURATION DEBUG ===");
+  console.log("FROM EMAIL:", process.env.Email_PiacTer);
+  console.log("TO EMAIL:", email);
+  console.log("SENDGRID_API_KEY set:", !!process.env.SENDGRID_API_KEY);
+  console.log("=====================================");
 
-// Verify connection on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("Email transporter verification failed:", error);
-  } else {
-    console.log("✅ Email transporter verified and ready to send messages");
-  }
-});
-const sendEmail = async (to, subject, username) => {
-  try {
-    const info = await transporter.sendMail({
-      from: process.env.Email_PiacTer,
-      to: to,
-      subject: subject,
-      html: `<h1>Üdvözlünk, ${username}!</h1>
-                   <p>Sikeres regisztráció a Piactéren!</p>`,
+  const mailConfig = {
+    from: {
+      email: process.env.Email_PiacTer,
+      name: "PiacTer",
+    },
+    to: email,
+    subject: "Email Verification - PiacTer",
+    html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">Welcome to PiacTer!</h2>
+        <p>Thank you for signing up. To complete your registration and start enjoying our services, please verify your email address using one of the methods below. Both options are valid for 10 minutes.</p>
+        
+       
+        
+        
+        <p style="color: #666; font-size: 14px;">If you didn't create an account with PiacTer, please ignore this email.</p>
+        
+        <p>Thank you for joining us!</p>
+        <p>Best regards,<br>The PiacTer Team</p>
+        </div>`,
+  };
+
+  sgMail
+    .send(mailConfig)
+    .then((response) => {
+      console.log("Email sent successfully via SendGrid");
+      console.log("SendGrid Response Status:", response[0].statusCode);
+      console.log("SendGrid Message ID:", response[0].headers["x-message-id"]);
+      return true;
+    })
+    .catch((error) => {
+      console.log("Email sending failed:", error.message);
+      console.log("Full error:", JSON.stringify(error, null, 2));
+      return false;
     });
-    console.log(
-      `✅ Email sikeresen elküldve a(z) ${to} címre. MessageID: ${info.messageId}`,
-    );
-    return true;
-  } catch (error) {
-    console.error(`❌ Hiba az email küldése során (${to}):`, error.message);
-    console.error("Error details:", error);
-    return false;
-  }
-};
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage: storage });
-
-const readDatabase = async () => {
-  try {
-    const data = await fs.readFile(DB_FILE, "utf-8");
-    return data ? JSON.parse(data) : { users: [], ads: [], messages: [] };
-  } catch (error) {
-    return { users: [], ads: [], messages: [] };
-  }
-};
-const writeDatabase = async (data) => {
-  await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2));
-};
+}
 
 module.exports = {
   sendEmail,
