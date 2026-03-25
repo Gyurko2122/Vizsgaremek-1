@@ -206,7 +206,7 @@ export default function Profile({ username, onBack }) {
                         cursor: "pointer",
                       }}
                     >
-                      ✏️ Szerkesztés
+                      Szerkesztés
                     </button>
                     <button
                       className="ad-delete-btn"
@@ -221,7 +221,7 @@ export default function Profile({ username, onBack }) {
                         cursor: "pointer",
                       }}
                     >
-                      🗑️ Törlés
+                      Törlés
                     </button>
                   </div>
                 </div>
