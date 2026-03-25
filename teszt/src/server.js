@@ -324,6 +324,55 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   }
 });
 
+// --- ADMIN ENDPOINTS (Development) ---
+
+// Clear all users from database
+app.delete("/api/admin/clear-users", async (req, res) => {
+  try {
+    const result = await Users_model.deleteMany({});
+    res.json({
+      message: "Összes felhasználó törölve",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error clearing users:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Clear all products from database
+app.delete("/api/admin/clear-products", async (req, res) => {
+  try {
+    const result = await Products_model.deleteMany({});
+    res.json({
+      message: "Összes termék törölve",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error clearing products:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Clear all data (users and products)
+app.delete("/api/admin/clear-all", async (req, res) => {
+  try {
+    const usersResult = await Users_model.deleteMany({});
+    const productsResult = await Products_model.deleteMany({});
+    const messagesResult = await Message_model.deleteMany({});
+
+    res.json({
+      message: "Összes adat törölve",
+      deletedUsers: usersResult.deletedCount,
+      deletedProducts: productsResult.deletedCount,
+      deletedMessages: messagesResult.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error clearing all data:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
 // SPA Fallback - serve index.html for any unmatched routes (React Router)
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../dist/index.html"));
