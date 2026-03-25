@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
 
+// Helper function - fix image URLs (handle both relative and absolute)
+const fixImageUrl = (url) => {
+  if (!url) return "/img/placeholder.png"; // Fallback
+  // If URL already starts with /, it's relative - return as is
+  if (url.startsWith("/")) return url;
+  // If URL starts with http, it's absolute - return as is
+  if (url.startsWith("http")) return url;
+  // Otherwise treat as relative path
+  return "/" + url;
+};
+
 export default function Body({ onProductClick }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +94,7 @@ export default function Body({ onProductClick }) {
                       <div className="product-card-image">
                         {/* Lazy loading képekhez */}
                         <img
-                          src={product.imageUrl}
+                          src={fixImageUrl(product.imageUrl)}
                           alt={product.productName}
                           loading="lazy"
                           onError={(e) => {

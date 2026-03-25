@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
 
+// Helper function - fix image URLs (handle both relative and absolute)
+const fixImageUrl = (url) => {
+  if (!url) return "https://via.placeholder.com/150"; // Fallback
+  // If URL already starts with /, it's relative - return as is
+  if (url.startsWith("/")) return url;
+  // If URL starts with http, it's absolute - return as is
+  if (url.startsWith("http")) return url;
+  // Otherwise treat as relative path
+  return "/" + url;
+};
+
 export default function Profile({ username, onBack }) {
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [profileImage, setProfileImage] = useState(
@@ -26,7 +37,7 @@ export default function Profile({ username, onBack }) {
         setUserEmail(data.email);
         if (data.picture) {
           // Az URL-ben már van versió, de biztosabb megoldás
-          setProfileImage(data.picture);
+          setProfileImage(fixImageUrl(data.picture));
         }
       } else {
         console.error("Error fetching user data:", response.status);
@@ -72,7 +83,7 @@ export default function Profile({ username, onBack }) {
       if (response.ok) {
         const data = await response.json();
         // Force refresh az új URL-lel
-        setProfileImage(data.imageUrl);
+        setProfileImage(fixImageUrl(data.imageUrl));
 
         // Frissítsd az adatokat az adatbázisból
         setTimeout(() => {
@@ -171,7 +182,7 @@ export default function Profile({ username, onBack }) {
                 <div key={ad._id} className="ad-card">
                   <div className="ad-card-image-container">
                     <img
-                      src={ad.imageUrl}
+                      src={fixImageUrl(ad.imageUrl)}
                       alt={ad.productName}
                       loading="lazy"
                       onError={(e) => {

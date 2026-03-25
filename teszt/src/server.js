@@ -153,11 +153,9 @@ app.post(
         return res.status(400).json({ error: "Felhasználónév hiányzik" });
       }
 
-      const protocol = req.protocol;
-      const host = req.get("host");
       // Cache-busting: timestamp hozzáadása az URL-hez
       const timestamp = Date.now();
-      const imageUrl = `${protocol}://${host}/uploads/profile-pictures/${req.file.filename}?v=${timestamp}`;
+      const imageUrl = `/uploads/profile-pictures/${req.file.filename}?v=${timestamp}`;
 
       // Frissítjük a felhasználó profilképét az adatbázisban
       const updateResult = await Users_model.findOneAndUpdate(
@@ -293,11 +291,9 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      const protocol = req.protocol;
-      const host = req.get("host");
       // Cache-busting: timestamp hozzáadása az URL-hez
       const timestamp = Date.now();
-      const imageUrl = `${protocol}://${host}/uploads/product-images/${req.file.filename}?v=${timestamp}`;
+      const imageUrl = `/uploads/product-images/${req.file.filename}?v=${timestamp}`;
       console.log("Product image uploaded:", imageUrl);
       res.json({ imageUrl });
     } catch (error) {
@@ -497,6 +493,29 @@ app.delete("/api/admin/clear-all", async (req, res) => {
     });
   } catch (error) {
     console.error("Error clearing all data:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Reset image URLs in database (fix broken URLs)
+app.post("/api/admin/reset-image-urls", async (req, res) => {
+  try {
+    // Reset all user profile pictures to empty
+    const usersResult = await Users_model.updateMany({}, { picture: "" });
+
+    // Reset all product image URLs to empty
+    const productsResult = await Products_model.updateMany(
+      {},
+      { imageUrl: "" },
+    );
+
+    res.json({
+      message: "Képek resetelve az adatbázisban",
+      updatedUsers: usersResult.modifiedCount,
+      updatedProducts: productsResult.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Error resetting image URLs:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
