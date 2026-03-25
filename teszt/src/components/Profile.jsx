@@ -8,6 +8,7 @@ export default function Profile({ username, onBack }) {
   const [userAds, setUserAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewAdForm, setShowNewAdForm] = useState(false);
+  const [editingAdId, setEditingAdId] = useState(null);
 
   useEffect(() => {
     // Fetch user data and their ads
@@ -188,12 +189,41 @@ export default function Profile({ username, onBack }) {
                     <p className="ad-description">{ad.description}</p>
                     <p className="ad-price">{ad.price} Ft</p>
                   </div>
-                  <button
-                    className="ad-delete-btn"
-                    onClick={() => handleDeleteAd(ad._id)}
+                  <div
+                    className="ad-card-actions"
+                    style={{ display: "flex", gap: "8px" }}
                   >
-                    Törlés
-                  </button>
+                    <button
+                      className="ad-edit-btn"
+                      onClick={() => setEditingAdId(ad._id)}
+                      style={{
+                        flex: 1,
+                        padding: "8px",
+                        backgroundColor: "#007bff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✏️ Szerkesztés
+                    </button>
+                    <button
+                      className="ad-delete-btn"
+                      onClick={() => handleDeleteAd(ad._id)}
+                      style={{
+                        flex: 1,
+                        padding: "8px",
+                        backgroundColor: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🗑️ Törlés
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -204,6 +234,20 @@ export default function Profile({ username, onBack }) {
               )
             )}
           </div>
+
+          {/* Edit Ad Form */}
+          {editingAdId && (
+            <EditAdForm
+              username={username}
+              adId={editingAdId}
+              ad={userAds.find((a) => a._id === editingAdId)}
+              onAdUpdated={() => {
+                setEditingAdId(null);
+                fetchUserData();
+              }}
+              onCancel={() => setEditingAdId(null)}
+            />
+          )}
 
           {/* New Ad Form */}
           {showNewAdForm && (
@@ -418,6 +462,166 @@ function NewAdForm({ username, onAdCreated }) {
       <button type="submit" className="btn-submit-ad" disabled={loading}>
         {loading ? "Feltöltés folyamatban..." : "Hirdetés közzététele"}
       </button>
+    </form>
+  );
+}
+
+function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
+  const [formData, setFormData] = useState({
+    productName: ad?.productName || "",
+    description: ad?.description || "",
+    location: ad?.location || "",
+    price: ad?.price || "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (
+      !formData.productName ||
+      !formData.description ||
+      !formData.location ||
+      !formData.price
+    ) {
+      alert("Kérjük, töltsd ki az összes mezőt!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/products/${adId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          productName: formData.productName,
+          description: formData.description,
+          location: formData.location,
+          price: parseFloat(formData.price),
+        }),
+      });
+
+      if (response.ok) {
+        alert("Hirdetés sikeresen frissítve!");
+        onAdUpdated();
+      } else {
+        const errorData = await response.json();
+        alert(`Hiba: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating ad:", error);
+      alert(`Hiba: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form
+      className="edit-ad-form"
+      onSubmit={handleSubmit}
+      style={{
+        backgroundColor: "#f8f9fa",
+        padding: "20px",
+        borderRadius: "8px",
+        marginTop: "20px",
+        border: "2px solid #007bff",
+      }}
+    >
+      <h3>Hirdetés szerkesztése</h3>
+
+      <div className="form-group">
+        <label htmlFor="editProductName">Terméknév *</label>
+        <input
+          type="text"
+          id="editProductName"
+          name="productName"
+          value={formData.productName}
+          onChange={handleInputChange}
+          placeholder="pl. iPhone 13"
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="editDescription">Leírás *</label>
+        <textarea
+          id="editDescription"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          placeholder="Részletesen írj le a termékről..."
+          rows="3"
+          required
+        ></textarea>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="editLocation">Hely/Város *</label>
+        <input
+          type="text"
+          id="editLocation"
+          name="location"
+          value={formData.location}
+          onChange={handleInputChange}
+          placeholder="pl. Budapest"
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="editPrice">Ár (Ft) *</label>
+        <input
+          type="number"
+          id="editPrice"
+          name="price"
+          value={formData.price}
+          onChange={handleInputChange}
+          placeholder="pl. 150000"
+          min="0"
+          required
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          type="submit"
+          className="btn-submit-ad"
+          disabled={loading}
+          style={{ flex: 1 }}
+        >
+          {loading ? "Mentés folyamatban..." : "💾 Mentés"}
+        </button>
+        <button
+          type="button"
+          className="btn-cancel-ad"
+          onClick={onCancel}
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: "10px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Mégsem
+        </button>
+      </div>
     </form>
   );
 }

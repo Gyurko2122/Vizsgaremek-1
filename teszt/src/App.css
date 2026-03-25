@@ -1856,6 +1856,135 @@ article,
 }
 
 /* ============================================
+   EDIT AD FORM STYLES
+   ============================================ */
+
+.edit-ad-form {
+  background-color: #f8f9fa;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Override dark mode for edit form */
+.edit-ad-form {
+  background-color: #1a2332 !important;
+  border: 2px solid #2563eb !important;
+}
+
+.edit-ad-form h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
+.edit-ad-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-ad-form label {
+  color: #cbd5e1;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.edit-ad-form input,
+.edit-ad-form textarea {
+  padding: 0.75rem 1rem;
+  background-color: #0f172a;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.edit-ad-form input:focus,
+.edit-ad-form textarea:focus {
+  outline: none;
+  border-color: #64748b;
+  background-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+}
+
+.edit-ad-form input::placeholder,
+.edit-ad-form textarea::placeholder {
+  color: #64748b;
+}
+
+.btn-cancel-ad {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-ad:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-cancel-ad:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   AD CARD ACTIONS
+   ============================================ */
+
+.ad-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem;
+}
+
+.ad-edit-btn {
+  flex: 1;
+  padding: 0.6rem;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.ad-edit-btn:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.profile-page .ad-delete-btn {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+  padding: 0.6rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  border-radius: 6px;
+  flex: 1;
+  margin: 0;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
