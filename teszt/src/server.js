@@ -82,7 +82,7 @@ const uploadProductImg = multer({
   },
 });
 
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "../dist")));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api", register);
 app.use("/api", login);
