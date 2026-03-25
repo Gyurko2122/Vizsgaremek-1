@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 
 // Helper function - fix image URLs (handle both relative and absolute)
+const DEFAULT_AVATAR =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23334155' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%2394a3b8'%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E";
+
 const fixImageUrl = (url) => {
-  if (!url) return "https://via.placeholder.com/150"; // Fallback
-  // If URL already starts with /, it's relative - return as is
+  if (!url) return DEFAULT_AVATAR;
   if (url.startsWith("/")) return url;
-  // If URL starts with http, it's absolute - return as is
   if (url.startsWith("http")) return url;
-  // Otherwise treat as relative path
   return "/" + url;
 };
 
@@ -18,9 +18,7 @@ export default function Profile({
   onDeleteAccount,
 }) {
   const [userEmail, setUserEmail] = useState("user@example.com");
-  const [profileImage, setProfileImage] = useState(
-    "https://via.placeholder.com/150",
-  );
+  const [profileImage, setProfileImage] = useState(DEFAULT_AVATAR);
   const [userAds, setUserAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewAdForm, setShowNewAdForm] = useState(false);
@@ -177,7 +175,7 @@ export default function Profile({
               src={profileImage}
               alt={username}
               onError={(e) => {
-                e.target.src = "https://via.placeholder.com/150";
+                e.target.src = DEFAULT_AVATAR;
               }}
             />
             <div className="profile-info">
@@ -217,10 +215,10 @@ export default function Profile({
             {isOwnProfile && (
               <div
                 className="ad-card new-ad-card-container"
-                onClick={() => setShowNewAdForm(!showNewAdForm)}
+                onClick={() => setShowNewAdForm(true)}
               >
                 <div className="new-ad-placeholder">
-                  <h3>{showNewAdForm ? "✕ Mégsem" : "+ Új hirdetés"}</h3>
+                  <h3>+ Új hirdetés</h3>
                 </div>
               </div>
             )}
@@ -317,15 +315,33 @@ export default function Profile({
             </div>
           )}
 
-          {/* New Ad Form */}
+          {/* New Ad Modal */}
           {isOwnProfile && showNewAdForm && (
-            <NewAdForm
-              username={username}
-              onAdCreated={() => {
-                setShowNewAdForm(false);
-                fetchUserData();
-              }}
-            />
+            <div
+              className="modal-overlay"
+              onClick={() => setShowNewAdForm(false)}
+            >
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+                style={{ maxWidth: "550px" }}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setShowNewAdForm(false)}
+                >
+                  ×
+                </button>
+                <NewAdForm
+                  username={username}
+                  onAdCreated={() => {
+                    setShowNewAdForm(false);
+                    fetchUserData();
+                  }}
+                  onCancel={() => setShowNewAdForm(false)}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -333,7 +349,7 @@ export default function Profile({
   );
 }
 
-function NewAdForm({ username, onAdCreated }) {
+function NewAdForm({ username, onAdCreated, onCancel }) {
   const [formData, setFormData] = useState({
     productName: "",
     description: "",
@@ -472,7 +488,7 @@ function NewAdForm({ username, onAdCreated }) {
   };
 
   return (
-    <form className="new-ad-form" onSubmit={handleSubmit}>
+    <form className="edit-ad-form" onSubmit={handleSubmit}>
       <h3>Új hirdetés létrehozása</h3>
 
       <div className="form-group">
@@ -555,9 +571,33 @@ function NewAdForm({ username, onAdCreated }) {
         )}
       </div>
 
-      <button type="submit" className="btn-submit-ad" disabled={loading}>
-        {loading ? "Feltöltés folyamatban..." : "Hirdetés közzététele"}
-      </button>
+      <div style={{ display: "flex", gap: "10px", gridColumn: "1 / -1" }}>
+        <button
+          type="submit"
+          className="btn-submit-ad"
+          disabled={loading}
+          style={{ flex: 1 }}
+        >
+          {loading ? "Feltöltés folyamatban..." : "Hirdetés közzététele"}
+        </button>
+        <button
+          type="button"
+          className="btn-cancel-ad"
+          onClick={onCancel}
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: "10px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Mégsem
+        </button>
+      </div>
     </form>
   );
 }
