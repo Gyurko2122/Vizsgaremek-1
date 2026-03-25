@@ -19,7 +19,7 @@ function sendEmail(email) {
     },
     to: email,
     subject: "Email Verification - PiacTer",
-    html: fs.readFileSync(path.join(__dirname, "layout.html"), "utf8"),
+    html: fs.readFileSync(path.join("./layout/layout.html"), "utf8"),
   };
 
   sgMail
