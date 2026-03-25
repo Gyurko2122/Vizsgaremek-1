@@ -23,10 +23,10 @@ function sendEmail(email) {
     attachments: [
       {
         content: fs
-          .readFileSync(path.join("./layout/welcome.png"))
+          .readFileSync(path.join("./layout/welcome.svg"))
           .toString("base64"),
-        filename: "welcome.png",
-        type: "image/png",
+        filename: "welcome.svg",
+        type: "image/svg+xml",
         disposition: "inline",
         content_id: "piacterimg",
       },
