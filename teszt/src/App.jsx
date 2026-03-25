@@ -7,6 +7,7 @@ import ProductDetail from "./components/ProductDetail";
 import LoginBody from "./components/LoginBody";
 import RegisterBody from "./components/RegisterBody";
 import Profile from "./components/Profile";
+import Messages from "./components/Messages";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -16,6 +17,7 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [showMessages, setShowMessages] = useState(false);
 
   // localStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -62,14 +64,21 @@ function App() {
       if (path === "/profile" && isLoggedIn) {
         setShowProfile(true);
         setShowProductDetail(false);
+        setShowMessages(false);
+      } else if (path === "/messages" && isLoggedIn) {
+        setShowMessages(true);
+        setShowProfile(false);
+        setShowProductDetail(false);
       } else if (path.startsWith("/product/")) {
         const productId = path.split("/product/")[1];
         setSelectedProductId(productId);
         setShowProductDetail(true);
         setShowProfile(false);
+        setShowMessages(false);
       } else {
         setShowProfile(false);
         setShowProductDetail(false);
+        setShowMessages(false);
       }
     };
 
@@ -89,6 +98,7 @@ function App() {
   const navigateHome = () => {
     window.history.pushState(null, "", "/");
     setShowProfile(false);
+    setShowMessages(false);
   };
 
   // Handle product detail navigation
@@ -104,6 +114,39 @@ function App() {
     setSelectedProductId(null);
   };
 
+  // Handle messages navigation
+  const navigateToMessages = () => {
+    window.history.pushState(null, "", "/messages");
+    setShowMessages(true);
+    setShowProfile(false);
+    setShowProductDetail(false);
+  };
+
+  if (showMessages && isLoggedIn) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
+        />
+        <Messages
+          username={username}
+          onClose={() => {
+            window.history.pushState(null, "", "/");
+            setShowMessages(false);
+          }}
+        />
+        <Footer />
+      </div>
+    );
+  }
+
   if (showProfile && isLoggedIn) {
     return (
       <div
@@ -115,6 +158,7 @@ function App() {
           username={username}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
         />
         <Profile
           username={username}
@@ -139,6 +183,7 @@ function App() {
           username={username}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
         />
         <div style={{ flex: 1 }}>
           <ProductDetail
@@ -163,6 +208,7 @@ function App() {
         username={username}
         onLogout={handleLogout}
         onProfileClick={navigateToProfile}
+        onMessagesClick={navigateToMessages}
       />
 
       <div>
