@@ -170,6 +170,7 @@ function App() {
             window.history.pushState(null, "", "/");
             setShowMessages(false);
           }}
+          onProfileClick={(targetUsername) => navigateToProfile(targetUsername)}
         />
         <Footer />
       </div>
@@ -204,6 +205,7 @@ function App() {
             setShowProfile(false);
             setProfileUsername(null);
           }}
+          onProductClick={navigateToProductDetail}
         />
         <Footer />
       </div>
