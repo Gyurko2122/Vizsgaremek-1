@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import "./ProductDetail.css";
 
+// Helper function - fix image URLs (handle both relative and absolute)
+const fixImageUrl = (url) => {
+  if (!url) return "/img/placeholder.png"; // Fallback
+  // If URL already starts with /, it's relative - return as is
+  if (url.startsWith("/")) return url;
+  // If URL starts with http, it's absolute - return as is
+  if (url.startsWith("http")) return url;
+  // Otherwise treat as relative path
+  return "/" + url;
+};
+
 export default function ProductDetail({
   productId,
   onBack,
@@ -127,7 +138,7 @@ export default function ProductDetail({
       <div className="product-detail-content">
         <div className="product-image-wrapper">
           <img
-            src={product.imageUrl}
+            src={fixImageUrl(product.imageUrl)}
             alt={product.productName}
             className="product-detail-image"
             loading="lazy"
