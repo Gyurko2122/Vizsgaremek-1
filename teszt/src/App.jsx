@@ -210,35 +210,6 @@ function App() {
     );
   }
 
-  if (showFavorites && isLoggedIn) {
-    return (
-      <div
-        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
-      >
-        <Navbar
-          onLoginClick={() => setShowLogin(true)}
-          isLoggedIn={isLoggedIn}
-          username={username}
-          onLogout={handleLogout}
-          onProfileClick={navigateToProfile}
-          onMessagesClick={navigateToMessages}
-          onFavoritesClick={navigateToFavorites}
-        />
-        <div style={{ flex: 1 }}>
-          <Favorites
-            username={username}
-            onProductClick={navigateToProductDetail}
-            onClose={() => {
-              window.history.pushState(null, "", "/");
-              setShowFavorites(false);
-            }}
-          />
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   if (showProductDetail && selectedProductId) {
     return (
       <div
@@ -262,6 +233,35 @@ function App() {
             onSellerClick={(sellerUsername) =>
               navigateToProfile(sellerUsername)
             }
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (showFavorites && isLoggedIn) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
+        />
+        <div style={{ flex: 1 }}>
+          <Favorites
+            username={username}
+            onProductClick={navigateToProductDetail}
+            onClose={() => {
+              window.history.pushState(null, "", "/");
+              setShowFavorites(false);
+            }}
           />
         </div>
         <Footer />
