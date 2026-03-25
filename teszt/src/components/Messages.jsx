@@ -204,6 +204,8 @@ export default function Messages({ username, onClose }) {
     <div className="messages-page">
       <div className="messages-wrapper">
         <div className="messages-main">
+          {/* Close button */}
+          <button className="messages-page-close-btn" onClick={onClose} title="Bezárás">✕</button>
           {/* Left Panel - Conversations */}
           <div className="messages-left-panel">
             <div className="messages-search-box">
