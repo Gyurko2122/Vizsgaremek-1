@@ -1,5 +1,8 @@
 {
   "name": "teszt",
+  "files": [
+    "dist"
+  ],
   "private": true,
   "version": "0.0.0",
   "scripts": {
