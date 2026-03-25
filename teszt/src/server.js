@@ -130,7 +130,9 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      const imageUrl = `http://localhost:3000/uploads/profile-pictures/${req.file.filename}`;
+      const protocol = req.protocol;
+      const host = req.get("host");
+      const imageUrl = `${protocol}://${host}/uploads/profile-pictures/${req.file.filename}`;
       const username = req.query.username; // Get username from query parameter
 
       if (!username) {
@@ -240,7 +242,9 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      const imageUrl = `http://localhost:3000/uploads/product-images/${req.file.filename}`;
+      const protocol = req.protocol;
+      const host = req.get("host");
+      const imageUrl = `${protocol}://${host}/uploads/product-images/${req.file.filename}`;
       console.log("Product image uploaded:", imageUrl);
       res.json({ imageUrl });
     } catch (error) {
