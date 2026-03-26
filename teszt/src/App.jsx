@@ -9,6 +9,7 @@ import RegisterBody from "./components/RegisterBody";
 import Profile from "./components/Profile";
 import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
+import SearchResults from "./components/SearchResults";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -21,6 +22,8 @@ function App() {
   const [showMessages, setShowMessages] = useState(false);
   const [profileUsername, setProfileUsername] = useState(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -119,6 +122,7 @@ function App() {
     setShowProductDetail(false);
     setSelectedProductId(null);
     setShowFavorites(false);
+    setShowSearch(false);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
     localStorage.removeItem("rememberMe");
@@ -153,11 +157,22 @@ function App() {
         setShowProductDetail(true);
         setShowProfile(false);
         setShowMessages(false);
+        setShowSearch(false);
+      } else if (path === "/search") {
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get("q") || "";
+        setSearchQuery(q);
+        setShowSearch(true);
+        setShowProfile(false);
+        setShowProductDetail(false);
+        setShowMessages(false);
+        setShowFavorites(false);
       } else {
         setShowProfile(false);
         setShowProductDetail(false);
         setShowMessages(false);
         setShowFavorites(false);
+        setShowSearch(false);
       }
     };
 
@@ -177,6 +192,7 @@ function App() {
     setShowMessages(false);
     setShowProductDetail(false);
     setShowFavorites(false);
+    setShowSearch(false);
   };
 
   const navigateHome = () => {
@@ -184,6 +200,7 @@ function App() {
     setShowProfile(false);
     setShowMessages(false);
     setShowFavorites(false);
+    setShowSearch(false);
   };
 
   // Handle product detail navigation
@@ -194,6 +211,7 @@ function App() {
     setShowFavorites(false);
     setShowProfile(false);
     setShowMessages(false);
+    setShowSearch(false);
   };
 
   const navigateFromProductDetail = () => {
@@ -209,6 +227,7 @@ function App() {
     setShowProfile(false);
     setShowProductDetail(false);
     setShowFavorites(false);
+    setShowSearch(false);
   };
 
   const navigateToFavorites = () => {
@@ -217,6 +236,21 @@ function App() {
     setShowProfile(false);
     setShowProductDetail(false);
     setShowMessages(false);
+    setShowSearch(false);
+  };
+
+  const navigateToSearch = (query) => {
+    setSearchQuery(query);
+    setShowSearch(true);
+    setShowProfile(false);
+    setShowProductDetail(false);
+    setShowMessages(false);
+    setShowFavorites(false);
+    window.history.pushState(
+      null,
+      "",
+      `/search?q=${encodeURIComponent(query)}`,
+    );
   };
 
   if (showMessages && isLoggedIn) {
@@ -232,6 +266,7 @@ function App() {
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
         />
         <Messages
           username={username}
@@ -260,6 +295,7 @@ function App() {
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
         />
         <Profile
           key={profileUsername || username}
@@ -296,6 +332,7 @@ function App() {
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
         />
         <div style={{ flex: 1 }}>
           <ProductDetail
@@ -306,6 +343,39 @@ function App() {
             onSellerClick={(sellerUsername) =>
               navigateToProfile(sellerUsername)
             }
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (showSearch) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
+        />
+        <div style={{ flex: 1 }}>
+          <SearchResults
+            query={searchQuery}
+            onProfileClick={(targetUsername) =>
+              navigateToProfile(targetUsername)
+            }
+            onProductClick={(productId) => navigateToProductDetail(productId)}
+            onClose={() => {
+              window.history.pushState(null, "", "/");
+              setShowSearch(false);
+            }}
           />
         </div>
         <Footer />
@@ -326,6 +396,7 @@ function App() {
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
         />
         <div style={{ flex: 1 }}>
           <Favorites
@@ -354,6 +425,7 @@ function App() {
         onProfileClick={navigateToProfile}
         onMessagesClick={navigateToMessages}
         onFavoritesClick={navigateToFavorites}
+        onSearchSubmit={navigateToSearch}
       />
 
       <div>
