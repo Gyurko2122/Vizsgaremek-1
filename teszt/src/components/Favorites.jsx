@@ -95,14 +95,13 @@ export default function Favorites({ username, onProductClick, onClose }) {
                   <p className="product-card-description">
                     {product.description.substring(0, 80)}...
                   </p>
-                  <div className="product-card-footer">
-                    <span className="product-card-price">
-                      {product.price} Ft
-                    </span>
-                    <span className="product-card-location">
-                      {product.location}
-                    </span>
-                  </div>
+                  <p className="product-card-location">
+                    <span className="product-card-label">Helyszín:</span>{" "}
+                    {product.location}
+                  </p>
+                  <p className="product-card-price">
+                    {product.price.toLocaleString("hu-HU")} Ft
+                  </p>
                   <p className="product-card-seller">
                     Eladó: {product.createdBy}
                   </p>

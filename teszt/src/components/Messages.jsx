@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import "./Messages.css";
 
@@ -30,18 +30,27 @@ const formatTime = (timestamp) => {
   });
 };
 
-export default function Messages({ username, onClose, onProfileClick }) {
+export default function Messages({
+  username,
+  onClose,
+  onProfileClick,
+  onProductClick,
+}) {
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [view, setView] = useState("inbox"); // "inbox" or "chat"
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef(null);
   const chatBodyRef = useRef(null);
   const selectedConvRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+  const searchBoxRef = useRef(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -182,7 +191,54 @@ export default function Messages({ username, onClose, onProfileClick }) {
     }
   };
 
-  // Filter conversations by search
+  // Search API call with debounce
+  const performSearch = useCallback(async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(query.trim())}`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery, performSearch]);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setSearchResults(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter conversations by search (local filter for conversation list)
   const filteredConversations = conversations.filter((conv) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -214,14 +270,98 @@ export default function Messages({ username, onClose, onProfileClick }) {
           </button>
           {/* Left Panel - Conversations */}
           <div className="messages-left-panel">
-            <div className="messages-search-box">
+            <div className="messages-search-box" ref={searchBoxRef}>
               <input
                 type="text"
                 className="messages-search-input"
-                placeholder="Search for chats"
+                placeholder="Keresés felhasználóra vagy termékre..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchResults && (
+                <div className="messages-search-dropdown">
+                  {searchLoading ? (
+                    <div className="messages-search-dropdown-empty">
+                      Keresés...
+                    </div>
+                  ) : (
+                    <>
+                      {searchResults.users &&
+                        searchResults.users.length > 0 && (
+                          <div className="messages-search-section">
+                            <div className="messages-search-section-title">
+                              Felhasználók
+                            </div>
+                            {searchResults.users.map((user) => (
+                              <div
+                                key={user.username}
+                                className="messages-search-item"
+                                onClick={() => {
+                                  if (onProfileClick)
+                                    onProfileClick(user.username);
+                                  setSearchQuery("");
+                                  setSearchResults(null);
+                                }}
+                              >
+                                <img
+                                  className="messages-search-item-avatar"
+                                  src={
+                                    fixImageUrl(user.picture) ||
+                                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Ccircle cx='15' cy='15' r='15' fill='%23475569'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%23cbd5e1'%3E%3F%3C/text%3E%3C/svg%3E"
+                                  }
+                                  alt={user.username}
+                                />
+                                <span>{user.username}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      {searchResults.products &&
+                        searchResults.products.length > 0 && (
+                          <div className="messages-search-section">
+                            <div className="messages-search-section-title">
+                              Termékek
+                            </div>
+                            {searchResults.products.map((product) => (
+                              <div
+                                key={product._id}
+                                className="messages-search-item"
+                                onClick={() => {
+                                  if (onProductClick)
+                                    onProductClick(product._id);
+                                  setSearchQuery("");
+                                  setSearchResults(null);
+                                }}
+                              >
+                                {product.imageUrl && (
+                                  <img
+                                    className="messages-search-item-avatar"
+                                    src={fixImageUrl(product.imageUrl)}
+                                    alt={product.productName}
+                                  />
+                                )}
+                                <div className="messages-search-item-info">
+                                  <span>{product.productName}</span>
+                                  <span className="messages-search-item-price">
+                                    {product.price.toLocaleString("hu-HU")} Ft
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      {(!searchResults.users ||
+                        searchResults.users.length === 0) &&
+                        (!searchResults.products ||
+                          searchResults.products.length === 0) && (
+                          <div className="messages-search-dropdown-empty">
+                            Nincs találat
+                          </div>
+                        )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div className="messages-conversation-list">
               {loading ? (
@@ -254,17 +394,7 @@ export default function Messages({ username, onClose, onProfileClick }) {
                       }}
                     />
                     <div className="messages-conv-info">
-                      <div
-                        className="messages-conv-name"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onProfileClick) onProfileClick(conv.partner);
-                        }}
-                        style={{ cursor: "pointer" }}
-                        title="Profil megtekintése"
-                      >
-                        {conv.partner}
-                      </div>
+                      <div className="messages-conv-name">{conv.partner}</div>
                       <div className="messages-conv-product">
                         {conv.productNames && conv.productNames.length > 0
                           ? `Érdeklődés: ${conv.productNames.join(", ")}`
@@ -346,7 +476,14 @@ export default function Messages({ username, onClose, onProfileClick }) {
                     ←
                   </button>
                   <div className="messages-chat-partner-info">
-                    <div className="messages-chat-partner-name">
+                    <div
+                      className="messages-chat-partner-name messages-chat-partner-name-clickable"
+                      onClick={() => {
+                        if (onProfileClick)
+                          onProfileClick(selectedConv?.partner);
+                      }}
+                      title="Profil megtekintése"
+                    >
                       {selectedConv?.partner}
                     </div>
                     {selectedConv?.productName && (

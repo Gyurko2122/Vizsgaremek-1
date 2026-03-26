@@ -240,6 +240,7 @@ function App() {
             setShowMessages(false);
           }}
           onProfileClick={(targetUsername) => navigateToProfile(targetUsername)}
+          onProductClick={(productId) => navigateToProductDetail(productId)}
         />
         <Footer />
       </div>

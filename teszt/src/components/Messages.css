@@ -92,6 +92,79 @@
   box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
 }
 
+.messages-search-box {
+  position: relative;
+}
+
+.messages-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 1rem;
+  right: 1rem;
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.messages-search-section {
+  padding: 0.3rem 0;
+}
+
+.messages-search-section-title {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.messages-search-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.messages-search-item:hover {
+  background: #334155;
+}
+
+.messages-search-item-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: #475569;
+}
+
+.messages-search-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.messages-search-item-price {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.messages-search-dropdown-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
 .messages-conversation-list {
   flex: 1;
   overflow-y: auto;
@@ -315,6 +388,16 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: #f5f5f5;
+}
+
+.messages-chat-partner-name-clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.messages-chat-partner-name-clickable:hover {
+  color: #60a5fa;
+  text-decoration: underline;
 }
 
 .messages-chat-product-name {
