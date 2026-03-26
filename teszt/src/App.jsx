@@ -22,16 +22,64 @@ function App() {
   const [profileUsername, setProfileUsername] = useState(null);
   const [showFavorites, setShowFavorites] = useState(false);
 
-  // localStorage-ből töltjük be a bejelentkezési adatokat
+  // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
-    const savedUsername = localStorage.getItem("username");
-    const savedIsLoggedIn = localStorage.getItem("isLoggedIn");
+    const rememberMe = localStorage.getItem("rememberMe") === "true";
+    let savedUsername, savedIsLoggedIn;
+
+    if (rememberMe) {
+      savedUsername = localStorage.getItem("username");
+      savedIsLoggedIn = localStorage.getItem("isLoggedIn");
+    } else {
+      savedUsername = sessionStorage.getItem("username");
+      savedIsLoggedIn = sessionStorage.getItem("isLoggedIn");
+    }
 
     if (savedIsLoggedIn === "true" && savedUsername) {
+      // Ha nem "remember me", ellenőrizzük a 20 perces lejáratot
+      if (!rememberMe) {
+        const loginTime = parseInt(sessionStorage.getItem("loginTime"), 10);
+        const now = Date.now();
+        const twentyMinutes = 20 * 60 * 1000;
+        if (!loginTime || now - loginTime > twentyMinutes) {
+          // Lejárt a munkamenet
+          sessionStorage.removeItem("isLoggedIn");
+          sessionStorage.removeItem("username");
+          sessionStorage.removeItem("loginTime");
+          localStorage.removeItem("rememberMe");
+          return;
+        }
+      }
       setIsLoggedIn(true);
       setUsername(savedUsername);
     }
   }, []);
+
+  // 20 perces automatikus kijelentkeztetés ha nem "Bejelentkezve maradok"
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const rememberMe = localStorage.getItem("rememberMe") === "true";
+    if (rememberMe) return;
+
+    const loginTime = parseInt(sessionStorage.getItem("loginTime"), 10);
+    if (!loginTime) return;
+
+    const twentyMinutes = 20 * 60 * 1000;
+    const elapsed = Date.now() - loginTime;
+    const remaining = twentyMinutes - elapsed;
+
+    if (remaining <= 0) {
+      handleLogout();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleLogout();
+      alert("A munkameneted lejárt, kérjük jelentkezz be újra!");
+    }, remaining);
+
+    return () => clearTimeout(timer);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (showLogin || showRegister) {
@@ -44,11 +92,21 @@ function App() {
     };
   }, [showLogin, showRegister]);
 
-  const handleLoginSuccess = (user) => {
+  const handleLoginSuccess = (user, rememberMe = false) => {
     setIsLoggedIn(true);
     setUsername(user);
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("username", user);
+
+    if (rememberMe) {
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("username", user);
+      localStorage.setItem("rememberMe", "true");
+    } else {
+      sessionStorage.setItem("isLoggedIn", "true");
+      sessionStorage.setItem("username", user);
+      sessionStorage.setItem("loginTime", Date.now().toString());
+      localStorage.setItem("rememberMe", "false");
+    }
+
     setShowLogin(false);
   };
 
@@ -63,6 +121,10 @@ function App() {
     setShowFavorites(false);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
+    localStorage.removeItem("rememberMe");
+    sessionStorage.removeItem("isLoggedIn");
+    sessionStorage.removeItem("username");
+    sessionStorage.removeItem("loginTime");
     window.history.pushState(null, "", "/");
   };
 
