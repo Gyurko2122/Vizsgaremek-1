@@ -525,6 +525,36 @@ app.delete("/api/products/:id", async (req, res) => {
 
 // --- MESSAGE ENDPOINTS ---
 
+// Keresés felhasználókra és termékekre
+app.get("/api/search", async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query || query.trim().length < 2) {
+      return res.json({ users: [], products: [] });
+    }
+
+    const sanitized = query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(sanitized, "i");
+
+    const [users, products] = await Promise.all([
+      Users_model.find({ username: regex }, { username: 1, picture: 1, _id: 0 })
+        .limit(5)
+        .lean(),
+      Products_model.find(
+        { productName: regex },
+        { productName: 1, price: 1, imageUrl: 1 },
+      )
+        .limit(5)
+        .lean(),
+    ]);
+
+    res.json({ users, products });
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Szerver hiba a keresés során" });
+  }
+});
+
 // Üzenet küldése
 app.post("/api/messages", async (req, res) => {
   try {
