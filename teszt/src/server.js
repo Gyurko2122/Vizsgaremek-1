@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
-const fs = require("fs");
 const http = require("http");
 const { Server } = require("socket.io");
 const login = require("./login");
@@ -12,6 +11,7 @@ const {
   Products_model,
   Message_model,
   Favorite_model,
+  Image_model,
 } = require("./database");
 const { sendEmail, sendMessageNotification } = require("./emailsender");
 const app = express();
@@ -123,84 +123,45 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cache-Control header middleware - képekhez
-app.use("/uploads", (req, res, next) => {
-  // Rövid cache időtartam az URLben timestamp-mel verziólt képeknél
-  res.setHeader("Cache-Control", "public, max-age=3600");
-  res.setHeader("ETag", `"${Date.now()}"`);
-  next();
-});
-
-// Static files szervírozása immutable cache-kel
-app.use("/api", register);
-app.use("/api", login);
-const uploadDir = path.join(__dirname, "../uploads");
-const profilePicsDir = path.join(uploadDir, "profile-pictures");
-const productImgsDir = path.join(uploadDir, "product-images");
-
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-if (!fs.existsSync(profilePicsDir)) fs.mkdirSync(profilePicsDir);
-if (!fs.existsSync(productImgsDir)) fs.mkdirSync(productImgsDir);
-
-// --- Multer beállítás ---
-const profilePicStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, profilePicsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${Date.now()}-profile${ext}`;
-    cb(null, uniqueName);
-  },
-});
-
-const productImgStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, productImgsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${Date.now()}-product${ext}`;
-    cb(null, uniqueName);
-  },
-});
+// --- Multer beállítás (memoryStorage - MongoDB-be mentjük) ---
+const imageFilter = (req, file, cb) => {
+  const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Csak képfájlok engedélyezve (jpg, png, gif, webp)"));
+  }
+};
 
 const uploadProfilePic = multer({
-  storage: profilePicStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Csak képfájlok engedélyezve (jpg, png, gif, webp)"));
-    }
-  },
+  fileFilter: imageFilter,
 });
 
 const uploadProductImg = multer({
-  storage: productImgStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Csak képfájlok engedélyezve (jpg, png, gif, webp)"));
-    }
-  },
+  fileFilter: imageFilter,
 });
 
 app.use(express.static(path.join(__dirname, "../dist")));
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "../uploads"), {
-    maxAge: "1h",
-    etag: false,
-  }),
-);
-app.use("/api", register);
-app.use("/api", login);
+
+// --- KÉP KISZOLGÁLÁS MongoDB-ből ---
+app.get("/api/images/:id", async (req, res) => {
+  try {
+    const image = await Image_model.findById(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: "Kép nem található" });
+    }
+    res.set("Content-Type", image.contentType);
+    res.set("Cache-Control", "public, max-age=86400"); // 24h cache
+    res.send(image.data);
+  } catch (error) {
+    console.error("Error serving image:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
 
 // --- USER ENDPOINTS ---
 
@@ -245,15 +206,20 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      const username = req.query.username; // Get username from query parameter
+      const username = req.query.username;
 
       if (!username) {
         return res.status(400).json({ error: "Felhasználónév hiányzik" });
       }
 
-      // Cache-busting: timestamp hozzáadása az URL-hez
-      const timestamp = Date.now();
-      const imageUrl = `/uploads/profile-pictures/${req.file.filename}?v=${timestamp}`;
+      // Kép mentése MongoDB-be
+      const newImage = new Image_model({
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+        filename: req.file.originalname,
+      });
+      const savedImage = await newImage.save();
+      const imageUrl = `/api/images/${savedImage._id}`;
 
       // Frissítjük a felhasználó profilképét az adatbázisban
       const updateResult = await Users_model.findOneAndUpdate(
@@ -400,10 +366,15 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      // Cache-busting: timestamp hozzáadása az URL-hez
-      const timestamp = Date.now();
-      const imageUrl = `/uploads/product-images/${req.file.filename}?v=${timestamp}`;
-      console.log("Product image uploaded:", imageUrl);
+      // Kép mentése MongoDB-be
+      const newImage = new Image_model({
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+        filename: req.file.originalname,
+      });
+      const savedImage = await newImage.save();
+      const imageUrl = `/api/images/${savedImage._id}`;
+      console.log("Product image uploaded to MongoDB:", imageUrl);
       res.json({ imageUrl });
     } catch (error) {
       console.error("Error uploading product image:", error);
@@ -434,11 +405,18 @@ app.post(
         return res.status(400).json({ error: "Nincsenek fájlok feltöltve" });
       }
 
-      const timestamp = Date.now();
-      const imageUrls = req.files.map(
-        (file) => `/uploads/product-images/${file.filename}?v=${timestamp}`,
-      );
-      console.log("Product images uploaded:", imageUrls);
+      // Minden kép mentése MongoDB-be
+      const imageUrls = [];
+      for (const file of req.files) {
+        const newImage = new Image_model({
+          data: file.buffer,
+          contentType: file.mimetype,
+          filename: file.originalname,
+        });
+        const savedImage = await newImage.save();
+        imageUrls.push(`/api/images/${savedImage._id}`);
+      }
+      console.log("Product images uploaded to MongoDB:", imageUrls);
       res.json({ imageUrls });
     } catch (error) {
       console.error("Error uploading product images:", error);
@@ -901,6 +879,23 @@ app.delete("/api/admin/clear-all", async (req, res) => {
   }
 });
 
+// Debug: ellenőrizd az adatbázisban tárolt kép URL-eket
+app.get("/api/admin/debug-images", async (req, res) => {
+  try {
+    const products = await Products_model.find(
+      {},
+      "productName imageUrl images",
+    ).lean();
+    const users = await Users_model.find({}, "username picture").lean();
+    const imageCount = await Image_model.countDocuments();
+
+    res.json({ products, users, totalImagesInDB: imageCount });
+  } catch (error) {
+    console.error("Debug images error:", error);
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
 // Reset image URLs in database (fix broken URLs)
 app.post("/api/admin/reset-image-urls", async (req, res) => {
   try {
@@ -910,13 +905,17 @@ app.post("/api/admin/reset-image-urls", async (req, res) => {
     // Reset all product image URLs to empty
     const productsResult = await Products_model.updateMany(
       {},
-      { imageUrl: "" },
+      { imageUrl: "", images: [] },
     );
+
+    // Töröljük az összes tárolt képet
+    const imagesResult = await Image_model.deleteMany({});
 
     res.json({
       message: "Képek resetelve az adatbázisban",
       updatedUsers: usersResult.modifiedCount,
       updatedProducts: productsResult.modifiedCount,
+      deletedImages: imagesResult.deletedCount,
     });
   } catch (error) {
     console.error("Error resetting image URLs:", error);
@@ -925,7 +924,11 @@ app.post("/api/admin/reset-image-urls", async (req, res) => {
 });
 
 // SPA Fallback - serve index.html for any unmatched routes (React Router)
-app.use((req, res) => {
+// Ne szolgáljon ki HTML-t API és upload kérésekhez
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
+    return res.status(404).json({ error: "Nem található" });
+  }
   res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
