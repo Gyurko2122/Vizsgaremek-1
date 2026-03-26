@@ -65,8 +65,16 @@ const MessageSchema = new Schema({
   isRead: { type: Boolean, default: false },
 });
 
+const ImageSchema = new Schema({
+  data: { type: Buffer, required: true },
+  contentType: { type: String, required: true },
+  filename: { type: String, required: true },
+  uploadedAt: { type: Date, default: Date.now },
+});
+
 const Favorite_model = model("Favorite", Favorite);
 const Message_model = model("Message", MessageSchema);
+const Image_model = model("Image", ImageSchema);
 
 const Products_model = model("Products", Products);
 
@@ -75,4 +83,5 @@ module.exports = {
   Products_model,
   Message_model,
   Favorite_model,
+  Image_model,
 };

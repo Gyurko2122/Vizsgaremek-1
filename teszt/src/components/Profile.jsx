@@ -18,7 +18,7 @@ export default function Profile({
   onDeleteAccount,
   onProductClick,
 }) {
-  const [userEmail, setUserEmail] = useState("user@example.com");
+  const [userEmail, setUserEmail] = useState("");
   const [profileImage, setProfileImage] = useState(DEFAULT_AVATAR);
   const [userAds, setUserAds] = useState([]);
   const [loading, setLoading] = useState(true);
