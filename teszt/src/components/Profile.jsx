@@ -42,6 +42,8 @@ export default function Profile({
         if (data.picture) {
           // Az URL-ben már van versió, de biztosabb megoldás
           setProfileImage(fixImageUrl(data.picture));
+        } else {
+          setProfileImage(DEFAULT_AVATAR);
         }
       } else {
         console.error("Error fetching user data:", response.status);
@@ -243,7 +245,9 @@ export default function Profile({
                 >
                   <div className="ad-card-image-container">
                     <img
-                      src={fixImageUrl(ad.imageUrl)}
+                      src={fixImageUrl(
+                        ad.imageUrl || (ad.images && ad.images[0]),
+                      )}
                       alt={ad.productName}
                       loading="lazy"
                       onError={(e) => {

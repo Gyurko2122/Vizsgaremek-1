@@ -79,7 +79,9 @@ export default function Favorites({ username, onProductClick, onClose }) {
                     ★
                   </button>
                   <img
-                    src={fixImageUrl(product.imageUrl)}
+                    src={fixImageUrl(
+                      product.imageUrl || (product.images && product.images[0]),
+                    )}
                     alt={product.productName}
                     loading="lazy"
                     onError={(e) => {

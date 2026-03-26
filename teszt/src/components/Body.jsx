@@ -127,7 +127,10 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
                         )}
                         {/* Lazy loading képekhez */}
                         <img
-                          src={fixImageUrl(product.imageUrl)}
+                          src={fixImageUrl(
+                            product.imageUrl ||
+                              (product.images && product.images[0]),
+                          )}
                           alt={product.productName}
                           loading="lazy"
                           onError={(e) => {
