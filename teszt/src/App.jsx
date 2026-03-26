@@ -192,6 +192,7 @@ function App() {
           onFavoritesClick={navigateToFavorites}
         />
         <Profile
+          key={profileUsername || username}
           username={profileUsername || username}
           isOwnProfile={!profileUsername || profileUsername === username}
           onBack={() => {
