@@ -123,6 +123,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// API route-ok felcsatolása
+app.use("/api", register);
+app.use("/api", login);
+
 // --- Multer beállítás (memoryStorage - MongoDB-be mentjük) ---
 const imageFilter = (req, file, cb) => {
   const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -225,7 +229,7 @@ app.post(
       const updateResult = await Users_model.findOneAndUpdate(
         { username },
         { picture: imageUrl },
-        { new: true },
+        { returnDocument: "after" },
       );
 
       if (!updateResult) {
@@ -477,7 +481,7 @@ app.put("/api/products/:id", async (req, res) => {
     const updatedProduct = await Products_model.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { new: true },
+      { returnDocument: "after" },
     );
 
     res.json({
