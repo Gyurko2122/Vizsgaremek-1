@@ -26,7 +26,11 @@ export default function Profile({
   const [editingAdId, setEditingAdId] = useState(null);
 
   useEffect(() => {
-    // Fetch user data and their ads
+    // Reset state when username changes
+    setProfileImage(DEFAULT_AVATAR);
+    setUserEmail("");
+    setUserAds([]);
+    setLoading(true);
     fetchUserData();
   }, [username]);
 
