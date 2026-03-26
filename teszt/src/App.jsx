@@ -55,8 +55,15 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUsername("");
+    setProfileUsername(null);
+    setShowProfile(false);
+    setShowMessages(false);
+    setShowProductDetail(false);
+    setSelectedProductId(null);
+    setShowFavorites(false);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
+    window.history.pushState(null, "", "/");
   };
 
   // Handle profile navigation via pathname
