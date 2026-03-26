@@ -8,8 +8,17 @@ export default function Navbar({
   onProfileClick,
   onMessagesClick,
   onFavoritesClick,
+  onSearchSubmit,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchInput.trim() && onSearchSubmit) {
+      onSearchSubmit(searchInput.trim());
+    }
+  };
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -50,13 +59,14 @@ export default function Navbar({
         </div>
 
         <div className="search-container">
-          <form action="/search-results.html" method="GET" id="search-form">
+          <form onSubmit={handleSearchSubmit} id="search-form">
             <input
-              name="q"
               id="search-input"
               type="search"
               placeholder="Keress termékekre..."
               aria-label="Keress termékekre"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             ></input>
             <button className="search-btn" type="submit"></button>
           </form>

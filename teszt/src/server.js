@@ -538,13 +538,13 @@ app.get("/api/search", async (req, res) => {
 
     const [users, products] = await Promise.all([
       Users_model.find({ username: regex }, { username: 1, picture: 1, _id: 0 })
-        .limit(5)
+        .limit(20)
         .lean(),
       Products_model.find(
         { productName: regex },
         { productName: 1, price: 1, imageUrl: 1 },
       )
-        .limit(5)
+        .limit(20)
         .lean(),
     ]);
 
