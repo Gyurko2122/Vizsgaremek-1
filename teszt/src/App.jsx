@@ -138,16 +138,22 @@ function App() {
     const handlePathChange = () => {
       const path = window.location.pathname;
 
-      if (path.startsWith("/profile") && isLoggedIn) {
+      if (path.startsWith("/profile")) {
         const profileUser = path.split("/profile/")[1];
         if (profileUser) {
           setProfileUsername(decodeURIComponent(profileUser));
-        } else {
+          setShowProfile(true);
+          setShowProductDetail(false);
+          setShowMessages(false);
+        } else if (isLoggedIn) {
           setProfileUsername(null);
+          setShowProfile(true);
+          setShowProductDetail(false);
+          setShowMessages(false);
+        } else {
+          window.history.pushState(null, "", "/");
+          setShowLogin(true);
         }
-        setShowProfile(true);
-        setShowProductDetail(false);
-        setShowMessages(false);
       } else if (path === "/messages" && isLoggedIn) {
         setShowMessages(true);
         setShowProfile(false);
@@ -195,6 +201,10 @@ function App() {
   // Handle /profile navigation
   const navigateToProfile = (targetUsername) => {
     const isOwn = !targetUsername || targetUsername === username;
+    if (isOwn && !isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     if (isOwn) {
       window.history.pushState(null, "", "/profile");
       setProfileUsername(null);
@@ -236,6 +246,10 @@ function App() {
 
   // Handle messages navigation
   const navigateToMessages = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     window.history.pushState(null, "", "/messages");
     setShowMessages(true);
     setShowProfile(false);
@@ -245,6 +259,10 @@ function App() {
   };
 
   const navigateToFavorites = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     window.history.pushState(null, "", "/favorites");
     setShowFavorites(true);
     setShowProfile(false);
@@ -285,12 +303,12 @@ function App() {
       );
     }
 
-    if (showProfile && isLoggedIn) {
+    if (showProfile && (isLoggedIn || profileUsername)) {
       return (
         <Profile
           key={profileUsername || username}
           username={profileUsername || username}
-          isOwnProfile={!profileUsername || profileUsername === username}
+          isOwnProfile={isLoggedIn && (!profileUsername || profileUsername === username)}
           onBack={() => {
             window.history.pushState(null, "", "/");
             setShowProfile(false);
@@ -315,6 +333,7 @@ function App() {
             onBack={navigateFromProductDetail}
             isLoggedIn={isLoggedIn}
             currentUser={username}
+            onLoginClick={() => setShowLogin(true)}
             onSellerClick={(sellerUsername) =>
               navigateToProfile(sellerUsername)
             }
