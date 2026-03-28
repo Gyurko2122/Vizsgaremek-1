@@ -1988,84 +1988,76 @@ article,
   gap: 1.5rem;
 }
 
-.profile-page .ad-card {
+.profile-ad-card {
   background: #1a2332;
   border: 1px solid #334155;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.ad-card-image-container {
+.profile-ad-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.profile-ad-card-img {
   width: 100%;
-  height: 200px;
+  height: 180px;
   overflow: hidden;
   background-color: #0f172a;
 }
 
-.ad-card-image-container img {
+.profile-ad-card-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.profile-page .ad-card img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  opacity: 0.8;
-}
-
-.profile-page .ad-card-info {
-  padding: 1.2rem;
+.profile-ad-card-info {
+  padding: 1rem;
   flex: 1;
 }
 
-.profile-page .ad-card-info h3 {
+.profile-ad-card-info h3 {
   font-size: 1.05rem;
   font-weight: 600;
   color: #e5e7eb;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.4rem 0;
 }
 
-.ad-location {
+.profile-ad-card-info p {
   font-size: 0.85rem;
-  color: #94a3b8 !important;
-  margin: 0.3rem 0 !important;
+  color: #94a3b8;
+  margin: 0.2rem 0;
 }
 
-.ad-description {
-  font-size: 0.9rem;
-  color: #cbd5e1 !important;
-  margin: 0.3rem 0 0.8rem 0 !important;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-clamp: 2;
-}
-
-.profile-page .ad-price {
-  font-size: 1.3rem;
+.profile-ad-card-price {
+  font-size: 1.2rem !important;
   font-weight: 700;
-  color: #f5f5f5;
-  margin: 0 !important;
+  color: #f5f5f5 !important;
+  margin-top: 0.5rem !important;
 }
 
-.profile-page .ad-delete-btn {
+.profile-ad-card-actions {
+  display: flex;
+  padding: 0 0.6rem 0.6rem;
+}
+
+.profile-ad-card-actions .ad-delete-btn {
   background-color: #7f1d1d;
   color: #fca5a5;
   border: 1px solid #ef4444;
   padding: 0.6rem;
   cursor: pointer;
   font-weight: 600;
-  width: calc(100% - 1.2rem);
+  width: 100%;
   font-size: 0.9rem;
   transition: all 0.2s;
   border-radius: 6px;
-  margin: 0.8rem 0.6rem 0.6rem 0.6rem;
 }
 
 .profile-page .ad-delete-btn:hover {
