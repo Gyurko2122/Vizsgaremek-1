@@ -35,6 +35,8 @@ export default function Messages({
   onClose,
   onProfileClick,
   onProductClick,
+  initialPartner,
+  initialProductName,
 }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
@@ -51,6 +53,23 @@ export default function Messages({
   const selectedConvRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const searchBoxRef = useRef(null);
+  const autoOpenedRef = useRef(false);
+
+  // Auto-open conversation when navigated from ProductDetail message
+  useEffect(() => {
+    if (
+      initialPartner &&
+      !loading &&
+      conversations.length > 0 &&
+      !autoOpenedRef.current
+    ) {
+      const conv = conversations.find((c) => c.partner === initialPartner);
+      if (conv) {
+        openChat(conv);
+        autoOpenedRef.current = true;
+      }
+    }
+  }, [conversations, initialPartner, loading]);
 
   // Keep ref in sync with state
   useEffect(() => {
