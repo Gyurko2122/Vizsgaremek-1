@@ -1954,19 +1954,20 @@ article,
 
 /* New Ad Card in Grid */
 .new-ad-card-container {
-  background-color: #0f172a !important;
-  border: 2px dashed #475569 !important;
+  background-color: #0f172a;
+  border: 2px dashed #475569;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 280px !important;
+  min-height: 280px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .new-ad-card-container:hover {
-  border-color: #2563eb !important;
-  background-color: #1a2332 !important;
+  border-color: #2563eb;
+  background-color: #1a2332;
   transform: translateY(-4px);
 }
 
