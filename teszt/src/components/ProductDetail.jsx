@@ -19,6 +19,7 @@ export default function ProductDetail({
   currentUser,
   onSellerClick,
   onMessageSent,
+  onLoginClick,
 }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -340,11 +341,17 @@ export default function ProductDetail({
 
           {currentUser !== product.createdBy && (
             <div className="message-section">
-              {!showMessageForm ? (
+              {!isLoggedIn ? (
+                <button
+                  className="send-message-button"
+                  onClick={() => onLoginClick && onLoginClick()}
+                >
+                  🔒 Jelentkezz be az üzenetküldéshez
+                </button>
+              ) : !showMessageForm ? (
                 <button
                   className="send-message-button"
                   onClick={() => setShowMessageForm(true)}
-                  disabled={!isLoggedIn}
                 >
                   💬 Üzenet az eladónak
                 </button>
