@@ -221,7 +221,7 @@ export default function Profile({
             {/* New Ad Card - Always First (only own profile) */}
             {isOwnProfile && (
               <div
-                className="ad-card new-ad-card-container"
+                className="new-ad-card-container"
                 onClick={() => setShowNewAdForm(true)}
               >
                 <div className="new-ad-placeholder">
