@@ -18,6 +18,7 @@ export default function ProductDetail({
   isLoggedIn,
   currentUser,
   onSellerClick,
+  onMessageSent,
 }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,13 +87,18 @@ export default function ProductDetail({
         throw new Error("Hiba az üzenet küldésénél");
       }
 
-      setMessageSuccess(true);
       setMessageText("");
       setShowMessageForm(false);
 
-      setTimeout(() => {
-        setMessageSuccess(false);
-      }, 3000);
+      // Redirect to messages page to show the conversation
+      if (onMessageSent) {
+        onMessageSent(product.createdBy, product._id, product.productName);
+      } else {
+        setMessageSuccess(true);
+        setTimeout(() => {
+          setMessageSuccess(false);
+        }, 3000);
+      }
     } catch (err) {
       alert("Hiba az üzenet küldésénél: " + err.message);
     } finally {
