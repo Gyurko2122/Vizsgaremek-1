@@ -194,10 +194,14 @@ function App() {
 
   // Handle /profile navigation
   const navigateToProfile = (targetUsername) => {
-    const user = targetUsername || username;
     const isOwn = !targetUsername || targetUsername === username;
-    window.history.pushState(null, "", isOwn ? "/profile" : `/profile/${encodeURIComponent(user)}`);
-    setProfileUsername(user);
+    if (isOwn) {
+      window.history.pushState(null, "", "/profile");
+      setProfileUsername(null);
+    } else {
+      window.history.pushState(null, "", `/profile/${encodeURIComponent(targetUsername)}`);
+      setProfileUsername(targetUsername);
+    }
     setShowProfile(true);
     setShowMessages(false);
     setShowProductDetail(false);
