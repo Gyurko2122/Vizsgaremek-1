@@ -54,11 +54,13 @@ export default function Profile({
       }
 
       // Termékleteöltés - szintén cache-bustig-gal
-      const productsResponse = await fetch(
-        `/api/products/user/${username}?t=${timestamp}`,
-      );
+      const productsUrl = `/api/products/user/${username}?t=${timestamp}`;
+      console.log("Fetching products from:", productsUrl);
+      const productsResponse = await fetch(productsUrl);
+      console.log("Products response status:", productsResponse.status);
       if (productsResponse.ok) {
         const products = await productsResponse.json();
+        console.log("Products received:", products.length, products);
         // Sort by createdAt descending (newest first)
         const sorted = products.sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt),

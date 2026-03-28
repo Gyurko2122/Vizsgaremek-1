@@ -28,28 +28,38 @@ export default function ProductDetail({
   const [messageSending, setMessageSending] = useState(false);
   const [messageSuccess, setMessageSuccess] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    productName: "",
+    description: "",
+    location: "",
+    price: "",
+  });
+  const [editExistingImages, setEditExistingImages] = useState([]);
+  const [editNewFiles, setEditNewFiles] = useState([]);
+  const [editNewPreviews, setEditNewPreviews] = useState([]);
+  const [editLoading, setEditLoading] = useState(false);
 
   // Termék adatainak lekérése
-  useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        // Cache-busting: timestamp hozzáadása az URL-hez
-        const timestamp = Date.now();
-        const response = await fetch(
-          `/api/products/${productId}?t=${timestamp}`,
-        );
-        if (!response.ok) {
-          throw new Error("Termék nem található");
-        }
-        const data = await response.json();
-        setProduct(data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
+  const fetchProduct = async () => {
+    try {
+      const timestamp = Date.now();
+      const response = await fetch(
+        `/api/products/${productId}?t=${timestamp}`,
+      );
+      if (!response.ok) {
+        throw new Error("Termék nem található");
       }
-    };
+      const data = await response.json();
+      setProduct(data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (productId) {
       fetchProduct();
     }
@@ -103,6 +113,90 @@ export default function ProductDetail({
       alert("Hiba az üzenet küldésénél: " + err.message);
     } finally {
       setMessageSending(false);
+    }
+  };
+
+  // Edit handlers
+  const openEditForm = () => {
+    if (!product) return;
+    setEditFormData({
+      productName: product.productName,
+      description: product.description,
+      location: product.location,
+      price: product.price,
+    });
+    setEditExistingImages(
+      product.images && product.images.length > 0
+        ? [...product.images]
+        : product.imageUrl
+          ? [product.imageUrl]
+          : [],
+    );
+    setEditNewFiles([]);
+    setEditNewPreviews([]);
+    setShowEditForm(true);
+  };
+
+  const handleEditNewFiles = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    const previews = [];
+    let loaded = 0;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        previews.push({ file, preview: reader.result });
+        loaded++;
+        if (loaded === files.length) {
+          setEditNewFiles((prev) => [...prev, ...files]);
+          setEditNewPreviews((prev) => [...prev, ...previews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editFormData.productName || !editFormData.description || !editFormData.location || !editFormData.price) return;
+    setEditLoading(true);
+    try {
+      let allImages = [...editExistingImages];
+      if (editNewFiles.length > 0) {
+        const imageFormData = new FormData();
+        editNewFiles.forEach((file) => imageFormData.append("files", file));
+        const imageResponse = await fetch("/api/upload/product-images", { method: "POST", body: imageFormData });
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          allImages = [...allImages, ...imageData.imageUrls];
+        }
+      }
+      const response = await fetch(`/api/products/${product._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: currentUser,
+          productName: editFormData.productName,
+          description: editFormData.description,
+          location: editFormData.location,
+          price: parseFloat(editFormData.price),
+          images: allImages.length > 0 ? allImages : undefined,
+          imageUrl: allImages.length > 0 ? allImages[0] : undefined,
+        }),
+      });
+      if (response.ok) {
+        setShowEditForm(false);
+        setCurrentImageIndex(0);
+        fetchProduct();
+      } else {
+        const errorData = await response.json();
+        alert(`Hiba: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert(`Hiba: ${error.message}`);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -292,12 +386,71 @@ export default function ProductDetail({
           )}
 
           {currentUser === product.createdBy && (
-            <div className="own-product-notice">
-              <p>Ez az Ön terméke</p>
-            </div>
+            <button
+              className="edit-product-button"
+              onClick={openEditForm}
+            >
+              ✏️ Hirdetés szerkesztése
+            </button>
           )}
         </div>
       </div>
+
+      {/* Edit modal */}
+      {showEditForm && (
+        <div className="modal-overlay" onClick={() => setShowEditForm(false)}>
+          <div className="modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "550px" }}>
+            <button className="modal-close" onClick={() => setShowEditForm(false)}>×</button>
+            <form className="edit-ad-form" onSubmit={handleEditSubmit}>
+              <h3>Hirdetés szerkesztése</h3>
+              <div className="form-group">
+                <label>Terméknév *</label>
+                <input type="text" value={editFormData.productName} onChange={(e) => setEditFormData((p) => ({ ...p, productName: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label>Leírás *</label>
+                <textarea value={editFormData.description} onChange={(e) => setEditFormData((p) => ({ ...p, description: e.target.value }))} rows="3" required />
+              </div>
+              <div className="form-group">
+                <label>Hely/Város *</label>
+                <input type="text" value={editFormData.location} onChange={(e) => setEditFormData((p) => ({ ...p, location: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label>Ár (Ft) *</label>
+                <input type="number" value={editFormData.price} onChange={(e) => setEditFormData((p) => ({ ...p, price: e.target.value }))} min="0" required />
+              </div>
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label>Képek</label>
+                {editExistingImages.length > 0 && (
+                  <div className="multi-image-preview">
+                    {editExistingImages.map((img, index) => (
+                      <div key={`existing-${index}`} className="preview-item">
+                        <img src={fixImageUrl(img)} alt={`Kép ${index + 1}`} />
+                        <button type="button" className="remove-preview" onClick={() => setEditExistingImages((prev) => prev.filter((_, i) => i !== index))}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editNewPreviews.length > 0 && (
+                  <div className="multi-image-preview" style={{ marginTop: "0.5rem" }}>
+                    {editNewPreviews.map((item, index) => (
+                      <div key={`new-${index}`} className="preview-item">
+                        <img src={item.preview} alt={`Új kép ${index + 1}`} />
+                        <button type="button" className="remove-preview" onClick={() => { setEditNewFiles((prev) => prev.filter((_, i) => i !== index)); setEditNewPreviews((prev) => prev.filter((_, i) => i !== index)); }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input type="file" accept="image/*" multiple onChange={handleEditNewFiles} style={{ marginTop: "0.5rem" }} />
+              </div>
+              <div style={{ display: "flex", gap: "10px", gridColumn: "1 / -1" }}>
+                <button type="submit" className="btn-submit-ad" disabled={editLoading} style={{ flex: 1 }}>{editLoading ? "Mentés..." : "💾 Mentés"}</button>
+                <button type="button" className="btn-cancel-ad" onClick={() => setShowEditForm(false)} disabled={editLoading} style={{ flex: 1, padding: "10px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>Mégsem</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -317,6 +317,22 @@
   text-align: center;
 }
 
+.edit-product-button {
+  width: 100%;
+  padding: 0.8rem 1.2rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-product-button:hover {
+  background: #1d4ed8;
+}
+
 /* LOADING & ERROR */
 
 .loading,
