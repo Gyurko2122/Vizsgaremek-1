@@ -45,9 +45,7 @@ export default function ProductDetail({
   const fetchProduct = async () => {
     try {
       const timestamp = Date.now();
-      const response = await fetch(
-        `/api/products/${productId}?t=${timestamp}`,
-      );
+      const response = await fetch(`/api/products/${productId}?t=${timestamp}`);
       if (!response.ok) {
         throw new Error("Termék nem található");
       }
@@ -159,14 +157,23 @@ export default function ProductDetail({
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editFormData.productName || !editFormData.description || !editFormData.location || !editFormData.price) return;
+    if (
+      !editFormData.productName ||
+      !editFormData.description ||
+      !editFormData.location ||
+      !editFormData.price
+    )
+      return;
     setEditLoading(true);
     try {
       let allImages = [...editExistingImages];
       if (editNewFiles.length > 0) {
         const imageFormData = new FormData();
         editNewFiles.forEach((file) => imageFormData.append("files", file));
-        const imageResponse = await fetch("/api/upload/product-images", { method: "POST", body: imageFormData });
+        const imageResponse = await fetch("/api/upload/product-images", {
+          method: "POST",
+          body: imageFormData,
+        });
         if (imageResponse.ok) {
           const imageData = await imageResponse.json();
           allImages = [...allImages, ...imageData.imageUrls];
@@ -348,55 +355,27 @@ export default function ProductDetail({
                 >
                   🔒 Jelentkezz be az üzenetküldéshez
                 </button>
-              ) : !showMessageForm ? (
+              ) : (
                 <button
                   className="send-message-button"
-                  onClick={() => setShowMessageForm(true)}
+                  onClick={() => {
+                    if (onMessageSent) {
+                      onMessageSent(
+                        product.createdBy,
+                        product._id,
+                        product.productName,
+                      );
+                    }
+                  }}
                 >
                   💬 Üzenet az eladónak
                 </button>
-              ) : (
-                <form className="message-form" onSubmit={handleSendMessage}>
-                  <textarea
-                    className="message-textarea"
-                    placeholder="Írja be az üzenetét..."
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    rows="4"
-                  />
-                  <div className="message-buttons">
-                    <button
-                      type="submit"
-                      className="send-btn"
-                      disabled={messageSending}
-                    >
-                      {messageSending ? "Küldés..." : "Küldés"}
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-btn"
-                      onClick={() => {
-                        setShowMessageForm(false);
-                        setMessageText("");
-                      }}
-                    >
-                      Mégse
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {messageSuccess && (
-                <p className="success-message">✓ Üzenet sikeresen küldve!</p>
               )}
             </div>
           )}
 
           {currentUser === product.createdBy && (
-            <button
-              className="edit-product-button"
-              onClick={openEditForm}
-            >
+            <button className="edit-product-button" onClick={openEditForm}>
               ✏️ Hirdetés szerkesztése
             </button>
           )}
@@ -406,25 +385,69 @@ export default function ProductDetail({
       {/* Edit modal */}
       {showEditForm && (
         <div className="modal-overlay" onClick={() => setShowEditForm(false)}>
-          <div className="modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "550px" }}>
-            <button className="modal-close" onClick={() => setShowEditForm(false)}>×</button>
+          <div
+            className="modal-window"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "550px" }}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setShowEditForm(false)}
+            >
+              ×
+            </button>
             <form className="edit-ad-form" onSubmit={handleEditSubmit}>
               <h3>Hirdetés szerkesztése</h3>
               <div className="form-group">
                 <label>Terméknév *</label>
-                <input type="text" value={editFormData.productName} onChange={(e) => setEditFormData((p) => ({ ...p, productName: e.target.value }))} required />
+                <input
+                  type="text"
+                  value={editFormData.productName}
+                  onChange={(e) =>
+                    setEditFormData((p) => ({
+                      ...p,
+                      productName: e.target.value,
+                    }))
+                  }
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>Leírás *</label>
-                <textarea value={editFormData.description} onChange={(e) => setEditFormData((p) => ({ ...p, description: e.target.value }))} rows="3" required />
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) =>
+                    setEditFormData((p) => ({
+                      ...p,
+                      description: e.target.value,
+                    }))
+                  }
+                  rows="3"
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>Hely/Város *</label>
-                <input type="text" value={editFormData.location} onChange={(e) => setEditFormData((p) => ({ ...p, location: e.target.value }))} required />
+                <input
+                  type="text"
+                  value={editFormData.location}
+                  onChange={(e) =>
+                    setEditFormData((p) => ({ ...p, location: e.target.value }))
+                  }
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>Ár (Ft) *</label>
-                <input type="number" value={editFormData.price} onChange={(e) => setEditFormData((p) => ({ ...p, price: e.target.value }))} min="0" required />
+                <input
+                  type="number"
+                  value={editFormData.price}
+                  onChange={(e) =>
+                    setEditFormData((p) => ({ ...p, price: e.target.value }))
+                  }
+                  min="0"
+                  required
+                />
               </div>
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                 <label>Képek</label>
@@ -433,26 +456,83 @@ export default function ProductDetail({
                     {editExistingImages.map((img, index) => (
                       <div key={`existing-${index}`} className="preview-item">
                         <img src={fixImageUrl(img)} alt={`Kép ${index + 1}`} />
-                        <button type="button" className="remove-preview" onClick={() => setEditExistingImages((prev) => prev.filter((_, i) => i !== index))}>×</button>
+                        <button
+                          type="button"
+                          className="remove-preview"
+                          onClick={() =>
+                            setEditExistingImages((prev) =>
+                              prev.filter((_, i) => i !== index),
+                            )
+                          }
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
                 {editNewPreviews.length > 0 && (
-                  <div className="multi-image-preview" style={{ marginTop: "0.5rem" }}>
+                  <div
+                    className="multi-image-preview"
+                    style={{ marginTop: "0.5rem" }}
+                  >
                     {editNewPreviews.map((item, index) => (
                       <div key={`new-${index}`} className="preview-item">
                         <img src={item.preview} alt={`Új kép ${index + 1}`} />
-                        <button type="button" className="remove-preview" onClick={() => { setEditNewFiles((prev) => prev.filter((_, i) => i !== index)); setEditNewPreviews((prev) => prev.filter((_, i) => i !== index)); }}>×</button>
+                        <button
+                          type="button"
+                          className="remove-preview"
+                          onClick={() => {
+                            setEditNewFiles((prev) =>
+                              prev.filter((_, i) => i !== index),
+                            );
+                            setEditNewPreviews((prev) =>
+                              prev.filter((_, i) => i !== index),
+                            );
+                          }}
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
-                <input type="file" accept="image/*" multiple onChange={handleEditNewFiles} style={{ marginTop: "0.5rem" }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleEditNewFiles}
+                  style={{ marginTop: "0.5rem" }}
+                />
               </div>
-              <div style={{ display: "flex", gap: "10px", gridColumn: "1 / -1" }}>
-                <button type="submit" className="btn-submit-ad" disabled={editLoading} style={{ flex: 1 }}>{editLoading ? "Mentés..." : "💾 Mentés"}</button>
-                <button type="button" className="btn-cancel-ad" onClick={() => setShowEditForm(false)} disabled={editLoading} style={{ flex: 1, padding: "10px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>Mégsem</button>
+              <div
+                style={{ display: "flex", gap: "10px", gridColumn: "1 / -1" }}
+              >
+                <button
+                  type="submit"
+                  className="btn-submit-ad"
+                  disabled={editLoading}
+                  style={{ flex: 1 }}
+                >
+                  {editLoading ? "Mentés..." : "💾 Mentés"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel-ad"
+                  onClick={() => setShowEditForm(false)}
+                  disabled={editLoading}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    backgroundColor: "#6c757d",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Mégsem
+                </button>
               </div>
             </form>
           </div>
