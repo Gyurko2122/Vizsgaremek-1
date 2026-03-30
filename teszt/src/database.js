@@ -98,8 +98,6 @@ const Products = new Schema({
   createdAt: { type: Date, required: true, default: Date.now },
 });
 
-Products.index({ publicId: 1 });
-
 const Favorite = new Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
   product: {
@@ -131,8 +129,6 @@ const ImageSchema = new Schema({
   filename: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
 });
-
-ImageSchema.index({ publicId: 1 });
 
 const Favorite_model = model("Favorite", Favorite);
 const Message_model = model("Message", MessageSchema);
