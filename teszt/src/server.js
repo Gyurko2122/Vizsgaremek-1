@@ -3,6 +3,7 @@ const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
 const http = require("http");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
 const login = require("./login");
 const register = require("./register");
@@ -12,6 +13,8 @@ const {
   Message_model,
   Favorite_model,
   Image_model,
+  encryptMessage,
+  decryptMessage,
 } = require("./database");
 const { sendEmail, sendMessageNotification } = require("./emailsender");
 const app = express();
@@ -45,7 +48,7 @@ io.on("connection", (socket) => {
       const newMessage = new Message_model({
         fromUser: fromUser.trim(),
         toUser: toUser.trim(),
-        message: message.trim(),
+        message: encryptMessage(message.trim()),
         productId: productId || null,
         productName: productName || null,
         timestamp: Date.now(),
@@ -54,14 +57,18 @@ io.on("connection", (socket) => {
 
       const savedMessage = await newMessage.save();
 
+      // Visszafejtett üzenet küldése a klienseknek
+      const decryptedMsg = savedMessage.toObject();
+      decryptedMsg.message = decryptMessage(decryptedMsg.message);
+
       // Küldés a címzettnek ha online
       const recipientSocketId = onlineUsers.get(toUser);
       if (recipientSocketId) {
-        io.to(recipientSocketId).emit("newMessage", savedMessage);
+        io.to(recipientSocketId).emit("newMessage", decryptedMsg);
       }
 
       // Visszaküldés a feladónak
-      socket.emit("messageSent", savedMessage);
+      socket.emit("messageSent", decryptedMsg);
 
       // Email értesítés küldése
       try {
@@ -127,6 +134,36 @@ app.use((req, res, next) => {
 app.use("/api", register);
 app.use("/api", login);
 
+// --- isAdmin Middleware ---
+const isAdminMiddleware = async (req, res, next) => {
+  const username =
+    req.headers["x-admin-username"] ||
+    req.body?.username ||
+    req.query?.username;
+  if (!username) {
+    return res.status(401).json({ error: "Nincs bejelentkezve" });
+  }
+  try {
+    const user = await Users_model.findOne({ username });
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: "Nincs admin jogosultság" });
+    }
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    return res.status(500).json({ error: "Szerver hiba" });
+  }
+};
+
+// Helper: publicId generálása régi rekordokhoz
+async function ensurePublicId(doc, Model) {
+  if (!doc.publicId) {
+    doc.publicId = crypto.randomBytes(16).toString("hex");
+    await Model.findByIdAndUpdate(doc._id, { publicId: doc.publicId });
+  }
+  return doc;
+}
+
 // --- Multer beállítás (memoryStorage - MongoDB-be mentjük) ---
 const imageFilter = (req, file, cb) => {
   const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -151,10 +188,21 @@ const uploadProductImg = multer({
 
 app.use(express.static(path.join(__dirname, "../dist")));
 
-// --- KÉP KISZOLGÁLÁS MongoDB-ből ---
-app.get("/api/images/:id", async (req, res) => {
+// --- KÉP KISZOLGÁLÁS MongoDB-ből (publicId alapján) ---
+app.get("/api/images/:identifier", async (req, res) => {
   try {
-    const image = await Image_model.findById(req.params.id);
+    // Először publicId alapján keresünk
+    let image = await Image_model.findOne({
+      publicId: req.params.identifier,
+    });
+    // Fallback: régi rekordoknál _id alapján
+    if (!image) {
+      try {
+        image = await Image_model.findById(req.params.identifier);
+      } catch (e) {
+        // Érvénytelen ObjectId formátum - nem baj
+      }
+    }
     if (!image) {
       return res.status(404).json({ error: "Kép nem található" });
     }
@@ -223,7 +271,7 @@ app.post(
         filename: req.file.originalname,
       });
       const savedImage = await newImage.save();
-      const imageUrl = `/api/images/${savedImage._id}`;
+      const imageUrl = `/api/images/${savedImage.publicId}`;
 
       // Frissítjük a felhasználó profilképét az adatbázisban
       const updateResult = await Users_model.findOneAndUpdate(
@@ -255,6 +303,15 @@ app.get("/api/products", async (req, res) => {
     const products = await Products_model.find({})
       .sort({ createdAt: -1 })
       .lean();
+    // publicId generálása régi rekordokhoz
+    for (const p of products) {
+      if (!p.publicId) {
+        p.publicId = crypto.randomBytes(16).toString("hex");
+        await Products_model.findByIdAndUpdate(p._id, {
+          publicId: p.publicId,
+        });
+      }
+    }
     res.json(products);
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -262,12 +319,30 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
-// Termék lekérése ID alapján
-app.get("/api/products/:id", async (req, res) => {
+// Termék lekérése publicId vagy _id alapján
+app.get("/api/products/:identifier", async (req, res) => {
   try {
-    const product = await Products_model.findById(req.params.id).lean();
+    // Először publicId alapján
+    let product = await Products_model.findOne({
+      publicId: req.params.identifier,
+    }).lean();
+    // Fallback: _id alapján (régi linkek)
+    if (!product) {
+      try {
+        product = await Products_model.findById(req.params.identifier).lean();
+      } catch (e) {
+        // Érvénytelen ObjectId
+      }
+    }
     if (!product) {
       return res.status(404).json({ error: "Termék nem található" });
+    }
+    // publicId generálása ha nincs
+    if (!product.publicId) {
+      product.publicId = crypto.randomBytes(16).toString("hex");
+      await Products_model.findByIdAndUpdate(product._id, {
+        publicId: product.publicId,
+      });
     }
     res.json(product);
   } catch (error) {
@@ -287,6 +362,15 @@ app.get("/api/products/user/:username", async (req, res) => {
 
     if (!products || products.length === 0) {
       return res.json([]);
+    }
+    // publicId generálása régi rekordokhoz
+    for (const p of products) {
+      if (!p.publicId) {
+        p.publicId = crypto.randomBytes(16).toString("hex");
+        await Products_model.findByIdAndUpdate(p._id, {
+          publicId: p.publicId,
+        });
+      }
     }
     res.json(products);
   } catch (error) {
@@ -377,7 +461,7 @@ app.post(
         filename: req.file.originalname,
       });
       const savedImage = await newImage.save();
-      const imageUrl = `/api/images/${savedImage._id}`;
+      const imageUrl = `/api/images/${savedImage.publicId}`;
       console.log("Product image uploaded to MongoDB:", imageUrl);
       res.json({ imageUrl });
     } catch (error) {
@@ -418,7 +502,7 @@ app.post(
           filename: file.originalname,
         });
         const savedImage = await newImage.save();
-        imageUrls.push(`/api/images/${savedImage._id}`);
+        imageUrls.push(`/api/images/${savedImage.publicId}`);
       }
       console.log("Product images uploaded to MongoDB:", imageUrls);
       res.json({ imageUrls });
@@ -542,11 +626,21 @@ app.get("/api/search", async (req, res) => {
         .lean(),
       Products_model.find(
         { productName: regex },
-        { productName: 1, price: 1, imageUrl: 1 },
+        { productName: 1, price: 1, imageUrl: 1, publicId: 1 },
       )
         .limit(20)
         .lean(),
     ]);
+
+    // publicId generálása régi rekordokhoz
+    for (const p of products) {
+      if (!p.publicId) {
+        p.publicId = crypto.randomBytes(16).toString("hex");
+        await Products_model.findByIdAndUpdate(p._id, {
+          publicId: p.publicId,
+        });
+      }
+    }
 
     res.json({ users, products });
   } catch (error) {
@@ -581,7 +675,7 @@ app.post("/api/messages", async (req, res) => {
     const newMessage = new Message_model({
       fromUser: fromUser.trim(),
       toUser: toUser.trim(),
-      message: message.trim(),
+      message: encryptMessage(message.trim()),
       productId: productId || null,
       productName: productName || null,
       timestamp: Date.now(),
@@ -590,10 +684,14 @@ app.post("/api/messages", async (req, res) => {
 
     const savedMessage = await newMessage.save();
 
+    // Visszafejtett üzenet küldése a klienseknek
+    const decryptedMsg = savedMessage.toObject();
+    decryptedMsg.message = decryptMessage(decryptedMsg.message);
+
     // Socket.io értesítés
     const recipientSocketId = onlineUsers.get(toUser);
     if (recipientSocketId) {
-      io.to(recipientSocketId).emit("newMessage", savedMessage);
+      io.to(recipientSocketId).emit("newMessage", decryptedMsg);
     }
 
     // Email értesítés küldése
@@ -611,7 +709,7 @@ app.post("/api/messages", async (req, res) => {
 
     res
       .status(201)
-      .json({ message: "Üzenet sikeresen küldve", messageData: savedMessage });
+      .json({ message: "Üzenet sikeresen küldve", messageData: decryptedMsg });
   } catch (error) {
     console.error("Error sending message:", error);
     res.status(500).json({ error: "Szerver hiba az üzenet küldésénél" });
@@ -627,6 +725,11 @@ app.get("/api/conversations/:username", async (req, res) => {
     })
       .sort({ timestamp: -1 })
       .lean();
+
+    // Üzenetek visszafejtése
+    for (const msg of messages) {
+      msg.message = decryptMessage(msg.message);
+    }
 
     // Csoportosítás partner alapján (1 user = 1 beszélgetés)
     const conversationMap = new Map();
@@ -730,6 +833,11 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
     })
       .sort({ timestamp: 1 })
       .lean();
+
+    // Üzenetek visszafejtése
+    for (const msg of messages) {
+      msg.message = decryptMessage(msg.message);
+    }
 
     res.json(messages);
   } catch (error) {
@@ -864,24 +972,121 @@ app.delete("/api/favorites", async (req, res) => {
   }
 });
 
-// --- ADMIN ENDPOINTS (Development) ---
+// --- ADMIN ENDPOINTS (Védett - isAdmin szükséges) ---
 
-// Clear all users from database
-app.delete("/api/admin/clear-users", async (req, res) => {
+// Admin jogosultság ellenőrzése
+app.get("/api/admin/check", async (req, res) => {
+  const username = req.query.username;
+  if (!username) return res.status(401).json({ isAdmin: false });
   try {
-    const result = await Users_model.deleteMany({});
-    res.json({
-      message: "Összes felhasználó törölve",
-      deletedCount: result.deletedCount,
-    });
+    const user = await Users_model.findOne({ username });
+    res.json({ isAdmin: user ? user.isAdmin === true : false });
+  } catch (e) {
+    res.status(500).json({ isAdmin: false });
+  }
+});
+
+// Admin statisztikák
+app.get("/api/admin/stats", isAdminMiddleware, async (req, res) => {
+  try {
+    const [userCount, productCount, messageCount] = await Promise.all([
+      Users_model.countDocuments(),
+      Products_model.countDocuments(),
+      Message_model.countDocuments(),
+    ]);
+    res.json({ userCount, productCount, messageCount });
   } catch (error) {
-    console.error("Error clearing users:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
 
-// Clear all products from database
-app.delete("/api/admin/clear-products", async (req, res) => {
+// Összes felhasználó lekérése (admin)
+app.get("/api/admin/users", isAdminMiddleware, async (req, res) => {
+  try {
+    const users = await Users_model.find(
+      {},
+      { username: 1, email: 1, isAdmin: 1, picture: 1 },
+    )
+      .sort({ username: 1 })
+      .lean();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Felhasználó törlése (admin)
+app.delete("/api/admin/users/:id", isAdminMiddleware, async (req, res) => {
+  try {
+    const user = await Users_model.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: "Felhasználó nem található" });
+    }
+    // Admin nem törölheti saját magát
+    if (user.username === req.adminUser.username) {
+      return res.status(400).json({ error: "Nem törölheted saját magad" });
+    }
+    // Töröljük a felhasználó termékeit, kedvenceit, üzeneteit
+    await Products_model.deleteMany({ createdBy: user.username });
+    await Favorite_model.deleteMany({ user: user._id });
+    await Message_model.deleteMany({
+      $or: [{ fromUser: user.username }, { toUser: user.username }],
+    });
+    await Users_model.findByIdAndDelete(user._id);
+    res.json({ message: "Felhasználó törölve", username: user.username });
+  } catch (error) {
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Összes termék lekérése (admin)
+app.get("/api/admin/products", isAdminMiddleware, async (req, res) => {
+  try {
+    const products = await Products_model.find({})
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Termék törlése (admin)
+app.delete("/api/admin/products/:id", isAdminMiddleware, async (req, res) => {
+  try {
+    const product = await Products_model.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: "Termék nem található" });
+    }
+    // Kedvencek törlése
+    await Favorite_model.deleteMany({ product: product._id });
+    await Products_model.findByIdAndDelete(product._id);
+    res.json({
+      message: "Termék törölve",
+      productName: product.productName,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Clear all users from database (admin only)
+app.delete("/api/admin/clear-users", isAdminMiddleware, async (req, res) => {
+  try {
+    const result = await Users_model.deleteMany({
+      _id: { $ne: req.adminUser._id },
+    });
+    res.json({
+      message: "Felhasználók törölve (admin kivételével)",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Szerver hiba" });
+  }
+});
+
+// Clear all products from database (admin only)
+app.delete("/api/admin/clear-products", isAdminMiddleware, async (req, res) => {
   try {
     const result = await Products_model.deleteMany({});
     res.json({
@@ -889,32 +1094,32 @@ app.delete("/api/admin/clear-products", async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (error) {
-    console.error("Error clearing products:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
 
-// Clear all data (users and products)
-app.delete("/api/admin/clear-all", async (req, res) => {
+// Clear all data (admin only)
+app.delete("/api/admin/clear-all", isAdminMiddleware, async (req, res) => {
   try {
-    const usersResult = await Users_model.deleteMany({});
     const productsResult = await Products_model.deleteMany({});
     const messagesResult = await Message_model.deleteMany({});
+    const favoritesResult = await Favorite_model.deleteMany({});
+    const imagesResult = await Image_model.deleteMany({});
 
     res.json({
-      message: "Összes adat törölve",
-      deletedUsers: usersResult.deletedCount,
+      message: "Összes adat törölve (felhasználók kivételével)",
       deletedProducts: productsResult.deletedCount,
       deletedMessages: messagesResult.deletedCount,
+      deletedFavorites: favoritesResult.deletedCount,
+      deletedImages: imagesResult.deletedCount,
     });
   } catch (error) {
-    console.error("Error clearing all data:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
 
-// Debug: ellenőrizd az adatbázisban tárolt kép URL-eket
-app.get("/api/admin/debug-images", async (req, res) => {
+// Debug images (admin only)
+app.get("/api/admin/debug-images", isAdminMiddleware, async (req, res) => {
   try {
     const products = await Products_model.find(
       {},
@@ -925,24 +1130,18 @@ app.get("/api/admin/debug-images", async (req, res) => {
 
     res.json({ products, users, totalImagesInDB: imageCount });
   } catch (error) {
-    console.error("Debug images error:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
 
-// Reset image URLs in database (fix broken URLs)
-app.post("/api/admin/reset-image-urls", async (req, res) => {
+// Reset image URLs (admin only)
+app.post("/api/admin/reset-image-urls", isAdminMiddleware, async (req, res) => {
   try {
-    // Reset all user profile pictures to empty
     const usersResult = await Users_model.updateMany({}, { picture: "" });
-
-    // Reset all product image URLs to empty
     const productsResult = await Products_model.updateMany(
       {},
       { imageUrl: "", images: [] },
     );
-
-    // Töröljük az összes tárolt képet
     const imagesResult = await Image_model.deleteMany({});
 
     res.json({
@@ -952,7 +1151,6 @@ app.post("/api/admin/reset-image-urls", async (req, res) => {
       deletedImages: imagesResult.deletedCount,
     });
   } catch (error) {
-    console.error("Error resetting image URLs:", error);
     res.status(500).json({ error: "Szerver hiba" });
   }
 });

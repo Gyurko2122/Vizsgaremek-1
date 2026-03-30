@@ -4,11 +4,13 @@ export default function Navbar({
   onLoginClick,
   isLoggedIn,
   username,
+  isAdmin,
   onLogout,
   onProfileClick,
   onMessagesClick,
   onFavoritesClick,
   onSearchSubmit,
+  onAdminClick,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -43,6 +45,13 @@ export default function Navbar({
     setDropdownOpen(false);
     if (onFavoritesClick) {
       onFavoritesClick();
+    }
+  };
+
+  const handleAdminClick = () => {
+    setDropdownOpen(false);
+    if (onAdminClick) {
+      onAdminClick();
     }
   };
 
@@ -104,6 +113,14 @@ export default function Navbar({
                   >
                     ★ Kedvencek
                   </button>
+                  {isAdmin && (
+                    <button
+                      className="dropdown-item admin-item"
+                      onClick={handleAdminClick}
+                    >
+                      ⚙ Admin Panel
+                    </button>
+                  )}
                   <button
                     className="dropdown-item logout-item"
                     onClick={handleLogout}

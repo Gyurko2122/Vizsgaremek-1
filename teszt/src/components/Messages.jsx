@@ -328,7 +328,9 @@ export default function Messages({
                                 className="messages-search-item"
                                 onClick={() => {
                                   if (onProductClick)
-                                    onProductClick(product._id);
+                                    onProductClick(
+                                      product.publicId || product._id,
+                                    );
                                   setSearchQuery("");
                                   setSearchResults(null);
                                 }}

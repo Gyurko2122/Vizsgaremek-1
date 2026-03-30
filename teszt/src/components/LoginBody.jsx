@@ -17,7 +17,7 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
 
       const data = await response.json();
       if (response.ok) {
-        onLoginSuccess(data.username, rememberMe);
+        onLoginSuccess(data.username, rememberMe, data.isAdmin || false);
       } else {
         alert(data.message || "Bejelentkezés sikertelen!");
       }

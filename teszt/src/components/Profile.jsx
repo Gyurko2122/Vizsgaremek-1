@@ -242,7 +242,7 @@ export default function Profile({
                     if (isOwnProfile) {
                       setEditingAdId(ad._id);
                     } else if (onProductClick) {
-                      onProductClick(ad._id);
+                      onProductClick(ad.publicId || ad._id);
                     }
                   }}
                   style={{ cursor: "pointer" }}

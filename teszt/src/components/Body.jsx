@@ -108,7 +108,9 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
                     <div
                       key={product._id}
                       className="product-card"
-                      onClick={() => onProductClick(product._id)}
+                      onClick={() =>
+                        onProductClick(product.publicId || product._id)
+                      }
                       style={{ cursor: "pointer" }}
                     >
                       <div className="product-card-image">

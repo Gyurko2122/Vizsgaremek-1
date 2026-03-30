@@ -151,7 +151,9 @@ export default function SearchResults({
                     <div
                       key={product._id}
                       className="search-result-item search-result-product"
-                      onClick={() => onProductClick(product._id)}
+                      onClick={() =>
+                        onProductClick(product.publicId || product._id)
+                      }
                     >
                       {product.imageUrl && (
                         <img
