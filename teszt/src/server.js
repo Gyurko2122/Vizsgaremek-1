@@ -1005,7 +1005,14 @@ app.get("/api/admin/users", isAdminMiddleware, async (req, res) => {
   try {
     const users = await Users_model.find(
       {},
-      { username: 1, email: 1, isAdmin: 1, picture: 1 },
+      {
+        username: 1,
+        email: 1,
+        isAdmin: 1,
+        picture: 1,
+        suspendedUntil: 1,
+        suspensionReason: 1,
+      },
     )
       .sort({ username: 1 })
       .lean();
