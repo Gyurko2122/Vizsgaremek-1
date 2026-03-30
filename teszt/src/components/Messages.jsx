@@ -57,15 +57,22 @@ export default function Messages({
 
   // Auto-open conversation when navigated from ProductDetail message
   useEffect(() => {
-    if (
-      initialPartner &&
-      !loading &&
-      conversations.length > 0 &&
-      !autoOpenedRef.current
-    ) {
+    if (initialPartner && !loading && !autoOpenedRef.current) {
       const conv = conversations.find((c) => c.partner === initialPartner);
       if (conv) {
         openChat(conv);
+        autoOpenedRef.current = true;
+      } else {
+        // No existing conversation — create a virtual one so the user can start chatting
+        const virtualConv = {
+          partner: initialPartner,
+          productName: initialProductName || null,
+          productId: null,
+          lastMessage: "",
+          lastTimestamp: Date.now(),
+          unreadCount: 0,
+        };
+        openChat(virtualConv);
         autoOpenedRef.current = true;
       }
     }

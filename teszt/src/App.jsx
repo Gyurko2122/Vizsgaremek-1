@@ -22,6 +22,8 @@ function App() {
   const [showProductDetail, setShowProductDetail] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showMessages, setShowMessages] = useState(false);
+  const [messagePartner, setMessagePartner] = useState(null);
+  const [messageProductName, setMessageProductName] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -283,6 +285,24 @@ function App() {
       setShowLogin(true);
       return;
     }
+    setMessagePartner(null);
+    setMessageProductName(null);
+    window.history.pushState(null, "", "/messages");
+    setShowMessages(true);
+    setShowProfile(false);
+    setShowProductDetail(false);
+    setShowFavorites(false);
+    setShowSearch(false);
+    setShowAdmin(false);
+  };
+
+  const navigateToMessagesWithPartner = (partner, productName) => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
+    setMessagePartner(partner);
+    setMessageProductName(productName || null);
     window.history.pushState(null, "", "/messages");
     setShowMessages(true);
     setShowProfile(false);
@@ -374,9 +394,13 @@ function App() {
           onClose={() => {
             window.history.pushState(null, "", "/");
             setShowMessages(false);
+            setMessagePartner(null);
+            setMessageProductName(null);
           }}
           onProfileClick={(targetUsername) => navigateToProfile(targetUsername)}
           onProductClick={(productId) => navigateToProductDetail(productId)}
+          initialPartner={messagePartner}
+          initialProductName={messageProductName}
         />
         <Footer />
       </div>
@@ -452,6 +476,10 @@ function App() {
             currentUser={username}
             onSellerClick={(sellerUsername) =>
               navigateToProfile(sellerUsername)
+            }
+            onLoginClick={() => setShowLogin(true)}
+            onMessageSent={(partner, productId, productName) =>
+              navigateToMessagesWithPartner(partner, productName)
             }
           />
         </div>
