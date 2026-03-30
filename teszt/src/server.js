@@ -319,43 +319,7 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Termék lekérése publicId vagy _id alapján
-app.get("/api/products/:identifier", async (req, res) => {
-  try {
-    // Először publicId alapján
-    let product = await Products_model.findOne({
-      publicId: req.params.identifier,
-    }).lean();
-    // Fallback: _id alapján (régi linkek)
-    if (!product) {
-      try {
-        product = await Products_model.findById(req.params.identifier).lean();
-      } catch (e) {
-        // Érvénytelen ObjectId
-      }
-    }
-    if (!product) {
-      return res.status(404).json({ error: "Termék nem található" });
-    }
-    // publicId generálása ha nincs
-    if (!product.publicId) {
-      product.publicId = crypto.randomBytes(16).toString("hex");
-      await Products_model.findByIdAndUpdate(product._id, {
-        publicId: product.publicId,
-      });
-    }
-    res.json(product);
-  } catch (error) {
-    console.error("Error fetching product:", error);
-    res.status(500).json({ error: "Szerver hiba a termék lekérésekor" });
-  }
-});
-
-// Termékek lekérése felhasználó alapján
-=======
-// Termékek lekérése felhasználó alapján (MUST be before :id route)
->>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
+// Termékek lekérése felhasználó alapján (MUST be before :identifier route)
 app.get("/api/products/user/:username", async (req, res) => {
   try {
     const products = await Products_model.find({
@@ -383,12 +347,30 @@ app.get("/api/products/user/:username", async (req, res) => {
   }
 });
 
-// Termék lekérése ID alapján
-app.get("/api/products/:id", async (req, res) => {
+// Termék lekérése publicId vagy _id alapján
+app.get("/api/products/:identifier", async (req, res) => {
   try {
-    const product = await Products_model.findById(req.params.id).lean();
+    // Először publicId alapján
+    let product = await Products_model.findOne({
+      publicId: req.params.identifier,
+    }).lean();
+    // Fallback: _id alapján (régi linkek)
+    if (!product) {
+      try {
+        product = await Products_model.findById(req.params.identifier).lean();
+      } catch (e) {
+        // Érvénytelen ObjectId
+      }
+    }
     if (!product) {
       return res.status(404).json({ error: "Termék nem található" });
+    }
+    // publicId generálása ha nincs
+    if (!product.publicId) {
+      product.publicId = crypto.randomBytes(16).toString("hex");
+      await Products_model.findByIdAndUpdate(product._id, {
+        publicId: product.publicId,
+      });
     }
     res.json(product);
   } catch (error) {
