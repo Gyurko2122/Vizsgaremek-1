@@ -418,6 +418,9 @@ function App() {
             setProfileUsername(null);
           }}
           onProductClick={navigateToProductDetail}
+          onMessageClick={(targetUser) => {
+            navigateToMessages();
+          }}
         />
         <Footer />
       </div>

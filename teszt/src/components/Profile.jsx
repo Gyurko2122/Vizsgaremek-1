@@ -17,6 +17,7 @@ export default function Profile({
   isOwnProfile = true,
   onDeleteAccount,
   onProductClick,
+  onMessageClick,
 }) {
   const [userEmail, setUserEmail] = useState("");
   const [profileImage, setProfileImage] = useState(DEFAULT_AVATAR);
@@ -211,6 +212,15 @@ export default function Profile({
                 </button>
               </>
             )}
+            {!isOwnProfile && onMessageClick && (
+              <button
+                className="upload-btn"
+                onClick={() => onMessageClick(username)}
+                style={{ marginTop: "10px" }}
+              >
+                ✉ Üzenet küldése
+              </button>
+            )}
           </div>
         </div>
 
@@ -241,9 +251,7 @@ export default function Profile({
                   key={ad._id}
                   className="profile-ad-card"
                   onClick={() => {
-                    if (isOwnProfile) {
-                      setEditingAdId(ad._id);
-                    } else if (onProductClick) {
+                    if (onProductClick) {
                       onProductClick(ad.publicId || ad._id);
                     }
                   }}
@@ -268,6 +276,15 @@ export default function Profile({
                   </div>
                   {isOwnProfile && (
                     <div className="profile-ad-card-actions">
+                      <button
+                        className="ad-edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingAdId(ad._id);
+                        }}
+                      >
+                        Szerkesztés
+                      </button>
                       <button
                         className="ad-delete-btn"
                         onClick={(e) => {
