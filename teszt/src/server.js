@@ -1026,6 +1026,12 @@ app.delete("/api/admin/users/:id", isAdminMiddleware, async (req, res) => {
     if (user.username === req.adminUser.username) {
       return res.status(400).json({ error: "Nem törölheted saját magad" });
     }
+    // Admin nem törölhet másik admint
+    if (user.isAdmin) {
+      return res
+        .status(403)
+        .json({ error: "Admin felhasználót nem lehet törölni" });
+    }
     // Töröljük a felhasználó termékeit, kedvenceit, üzeneteit
     await Products_model.deleteMany({ createdBy: user.username });
     await Favorite_model.deleteMany({ user: user._id });
@@ -1038,6 +1044,69 @@ app.delete("/api/admin/users/:id", isAdminMiddleware, async (req, res) => {
     res.status(500).json({ error: "Szerver hiba" });
   }
 });
+
+// Felhasználó felfüggesztése (admin)
+app.post(
+  "/api/admin/users/:id/suspend",
+  isAdminMiddleware,
+  async (req, res) => {
+    try {
+      const { days, reason } = req.body;
+      if (!days || ![3, 7, 14].includes(Number(days))) {
+        return res
+          .status(400)
+          .json({ error: "Érvénytelen felfüggesztési időtartam" });
+      }
+      const user = await Users_model.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "Felhasználó nem található" });
+      }
+      if (user.username === req.adminUser.username) {
+        return res
+          .status(400)
+          .json({ error: "Nem függesztheted fel saját magad" });
+      }
+      if (user.isAdmin) {
+        return res
+          .status(403)
+          .json({ error: "Admin felhasználót nem lehet felfüggeszteni" });
+      }
+      const suspendedUntil = new Date();
+      suspendedUntil.setDate(suspendedUntil.getDate() + Number(days));
+      user.suspendedUntil = suspendedUntil;
+      user.suspensionReason = reason || "Nincs megadva ok";
+      await user.save();
+      res.json({
+        message: `${user.username} felfüggesztve ${days} napra`,
+        suspendedUntil: user.suspendedUntil,
+        suspensionReason: user.suspensionReason,
+      });
+    } catch (error) {
+      console.error("Suspend error:", error);
+      res.status(500).json({ error: "Szerver hiba" });
+    }
+  },
+);
+
+// Felfüggesztés feloldása (admin)
+app.post(
+  "/api/admin/users/:id/unsuspend",
+  isAdminMiddleware,
+  async (req, res) => {
+    try {
+      const user = await Users_model.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "Felhasználó nem található" });
+      }
+      user.suspendedUntil = null;
+      user.suspensionReason = null;
+      await user.save();
+      res.json({ message: `${user.username} felfüggesztése feloldva` });
+    } catch (error) {
+      res.status(500).json({ error: "Szerver hiba" });
+    }
+  },
+);
 
 // Összes termék lekérése (admin)
 app.get("/api/admin/products", isAdminMiddleware, async (req, res) => {

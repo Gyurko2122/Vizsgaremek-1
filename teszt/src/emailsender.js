@@ -18,7 +18,7 @@ function sendEmail(email) {
       name: "PiacTer",
     },
     to: email,
-    subject: "Email Verification - PiacTer",
+    subject: "Thanks For your Registration - PiacTer",
     html: fs.readFileSync(path.join("./layout/layout.html"), "utf8"),
     attachments: [
       {
@@ -43,7 +43,12 @@ function sendEmail(email) {
     })
     .catch((error) => {
       console.log("Email sending failed:", error.message);
-      console.log("Full error:", JSON.stringify(error, null, 2));
+      if (error.response) {
+        console.log(
+          "SendGrid error body:",
+          JSON.stringify(error.response.body, null, 2),
+        );
+      }
       return false;
     });
 }
@@ -53,14 +58,34 @@ function sendMessageNotification(recipientEmail, senderUsername, productName) {
   console.log("TO:", recipientEmail);
   console.log("FROM USER:", senderUsername);
   console.log("PRODUCT:", productName);
+  console.log("SENDGRID_API_KEY set:", !!process.env.SENDGRID_API_KEY);
+  console.log("FROM EMAIL:", process.env.Email_PiacTer);
   console.log("==================================");
+
+  if (
+    !recipientEmail ||
+    !process.env.Email_PiacTer ||
+    !process.env.SENDGRID_API_KEY
+  ) {
+    console.log("Missing required email config - skipping notification");
+    return Promise.resolve(false);
+  }
+
+  const escapeHtml = (str) =>
+    String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const safeSender = escapeHtml(senderUsername);
+  const safeProduct = escapeHtml(productName);
 
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; color: #e5e7eb; padding: 2rem; border-radius: 12px;">
       <h1 style="color: #f5f5f5; font-size: 1.8rem; margin-bottom: 1rem;">PiacTer - Új üzenet érkezett!</h1>
       <div style="background-color: #1a2332; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
-        <p style="color: #cbd5e1; margin: 0 0 0.5rem 0;"><strong style="color: #f5f5f5;">Feladó:</strong> ${senderUsername}</p>
-        <p style="color: #cbd5e1; margin: 0;"><strong style="color: #f5f5f5;">Tárgy:</strong> Érdeklődés: ${productName}</p>
+        <p style="color: #cbd5e1; margin: 0 0 0.5rem 0;"><strong style="color: #f5f5f5;">Feladó:</strong> ${safeSender}</p>
+        <p style="color: #cbd5e1; margin: 0;"><strong style="color: #f5f5f5;">Tárgy:</strong> Érdeklődés: ${safeProduct}</p>
       </div>
       <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 1.5rem;">Jelentkezz be a PiacTér oldalra az üzenet megtekintéséhez és válaszoláshoz.</p>
       <hr style="border: none; border-top: 1px solid #334155; margin: 1.5rem 0;" />
@@ -78,7 +103,7 @@ function sendMessageNotification(recipientEmail, senderUsername, productName) {
     html: htmlContent,
   };
 
-  sgMail
+  return sgMail
     .send(mailConfig)
     .then((response) => {
       console.log("Message notification email sent successfully");
@@ -87,6 +112,12 @@ function sendMessageNotification(recipientEmail, senderUsername, productName) {
     })
     .catch((error) => {
       console.log("Message notification email failed:", error.message);
+      if (error.response) {
+        console.log(
+          "SendGrid error body:",
+          JSON.stringify(error.response.body, null, 2),
+        );
+      }
       return false;
     });
 }
