@@ -10,12 +10,14 @@ import Profile from "./components/Profile";
 import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
 import SearchResults from "./components/SearchResults";
+import AdminPanel from "./components/AdminPanel";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
@@ -24,6 +26,7 @@ function App() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAdmin, setShowAdmin] = useState(false);
 
   // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -49,12 +52,18 @@ function App() {
           sessionStorage.removeItem("isLoggedIn");
           sessionStorage.removeItem("username");
           sessionStorage.removeItem("loginTime");
+          sessionStorage.removeItem("isAdmin");
           localStorage.removeItem("rememberMe");
           return;
         }
       }
       setIsLoggedIn(true);
       setUsername(savedUsername);
+      // isAdmin visszaállítása
+      const savedIsAdmin = rememberMe
+        ? localStorage.getItem("isAdmin")
+        : sessionStorage.getItem("isAdmin");
+      setIsAdmin(savedIsAdmin === "true");
     }
   }, []);
 
@@ -95,18 +104,25 @@ function App() {
     };
   }, [showLogin, showRegister]);
 
-  const handleLoginSuccess = (user, rememberMe = false) => {
+  const handleLoginSuccess = (
+    user,
+    rememberMe = false,
+    userIsAdmin = false,
+  ) => {
     setIsLoggedIn(true);
     setUsername(user);
+    setIsAdmin(userIsAdmin);
 
     if (rememberMe) {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("username", user);
       localStorage.setItem("rememberMe", "true");
+      localStorage.setItem("isAdmin", userIsAdmin ? "true" : "false");
     } else {
       sessionStorage.setItem("isLoggedIn", "true");
       sessionStorage.setItem("username", user);
       sessionStorage.setItem("loginTime", Date.now().toString());
+      sessionStorage.setItem("isAdmin", userIsAdmin ? "true" : "false");
       localStorage.setItem("rememberMe", "false");
     }
 
@@ -116,6 +132,7 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUsername("");
+    setIsAdmin(false);
     setProfileUsername(null);
     setShowProfile(false);
     setShowMessages(false);
@@ -123,12 +140,15 @@ function App() {
     setSelectedProductId(null);
     setShowFavorites(false);
     setShowSearch(false);
+    setShowAdmin(false);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
     localStorage.removeItem("rememberMe");
+    localStorage.removeItem("isAdmin");
     sessionStorage.removeItem("isLoggedIn");
     sessionStorage.removeItem("username");
     sessionStorage.removeItem("loginTime");
+    sessionStorage.removeItem("isAdmin");
     window.history.pushState(null, "", "/");
   };
 
@@ -141,16 +161,26 @@ function App() {
         setShowProfile(true);
         setShowProductDetail(false);
         setShowMessages(false);
+        setShowAdmin(false);
       } else if (path === "/messages" && isLoggedIn) {
         setShowMessages(true);
         setShowProfile(false);
         setShowProductDetail(false);
         setShowFavorites(false);
+        setShowAdmin(false);
       } else if (path === "/favorites" && isLoggedIn) {
         setShowFavorites(true);
         setShowProfile(false);
         setShowProductDetail(false);
         setShowMessages(false);
+        setShowAdmin(false);
+      } else if (path === "/admin" && isLoggedIn && isAdmin) {
+        setShowAdmin(true);
+        setShowProfile(false);
+        setShowProductDetail(false);
+        setShowMessages(false);
+        setShowFavorites(false);
+        setShowSearch(false);
       } else if (path.startsWith("/product/")) {
         const productId = path.split("/product/")[1];
         setSelectedProductId(productId);
@@ -173,6 +203,7 @@ function App() {
         setShowMessages(false);
         setShowFavorites(false);
         setShowSearch(false);
+        setShowAdmin(false);
       }
     };
 
@@ -193,12 +224,25 @@ function App() {
     setShowProductDetail(false);
     setShowFavorites(false);
     setShowSearch(false);
+    setShowAdmin(false);
   };
 
   const navigateHome = () => {
     window.history.pushState(null, "", "/");
     setShowProfile(false);
     setShowMessages(false);
+    setShowFavorites(false);
+    setShowSearch(false);
+    setShowAdmin(false);
+  };
+
+  const navigateToAdmin = () => {
+    if (!isAdmin) return;
+    window.history.pushState(null, "", "/admin");
+    setShowAdmin(true);
+    setShowProfile(false);
+    setShowMessages(false);
+    setShowProductDetail(false);
     setShowFavorites(false);
     setShowSearch(false);
   };
@@ -228,6 +272,7 @@ function App() {
     setShowProductDetail(false);
     setShowFavorites(false);
     setShowSearch(false);
+    setShowAdmin(false);
   };
 
   const navigateToFavorites = () => {
@@ -237,6 +282,7 @@ function App() {
     setShowProductDetail(false);
     setShowMessages(false);
     setShowSearch(false);
+    setShowAdmin(false);
   };
 
   const navigateToSearch = (query) => {
@@ -246,12 +292,44 @@ function App() {
     setShowProductDetail(false);
     setShowMessages(false);
     setShowFavorites(false);
+    setShowAdmin(false);
     window.history.pushState(
       null,
       "",
       `/search?q=${encodeURIComponent(query)}`,
     );
   };
+
+  if (showAdmin && isLoggedIn && isAdmin) {
+    return (
+      <div
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
+        <Navbar
+          onLoginClick={() => setShowLogin(true)}
+          isLoggedIn={isLoggedIn}
+          username={username}
+          isAdmin={isAdmin}
+          onLogout={handleLogout}
+          onProfileClick={navigateToProfile}
+          onMessagesClick={navigateToMessages}
+          onFavoritesClick={navigateToFavorites}
+          onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
+        />
+        <div style={{ flex: 1 }}>
+          <AdminPanel
+            username={username}
+            onClose={() => {
+              window.history.pushState(null, "", "/");
+              setShowAdmin(false);
+            }}
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (showMessages && isLoggedIn) {
     return (
@@ -262,11 +340,13 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           isLoggedIn={isLoggedIn}
           username={username}
+          isAdmin={isAdmin}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
           onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
         />
         <Messages
           username={username}
@@ -291,11 +371,13 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           isLoggedIn={isLoggedIn}
           username={username}
+          isAdmin={isAdmin}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
           onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
         />
         <Profile
           key={profileUsername || username}
@@ -328,11 +410,13 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           isLoggedIn={isLoggedIn}
           username={username}
+          isAdmin={isAdmin}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
           onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
         />
         <div style={{ flex: 1 }}>
           <ProductDetail
@@ -359,11 +443,13 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           isLoggedIn={isLoggedIn}
           username={username}
+          isAdmin={isAdmin}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
           onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
         />
         <div style={{ flex: 1 }}>
           <SearchResults
@@ -392,11 +478,13 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           isLoggedIn={isLoggedIn}
           username={username}
+          isAdmin={isAdmin}
           onLogout={handleLogout}
           onProfileClick={navigateToProfile}
           onMessagesClick={navigateToMessages}
           onFavoritesClick={navigateToFavorites}
           onSearchSubmit={navigateToSearch}
+          onAdminClick={navigateToAdmin}
         />
         <div style={{ flex: 1 }}>
           <Favorites
@@ -421,11 +509,13 @@ function App() {
         onLoginClick={() => setShowLogin(true)}
         isLoggedIn={isLoggedIn}
         username={username}
+        isAdmin={isAdmin}
         onLogout={handleLogout}
         onProfileClick={navigateToProfile}
         onMessagesClick={navigateToMessages}
         onFavoritesClick={navigateToFavorites}
         onSearchSubmit={navigateToSearch}
+        onAdminClick={navigateToAdmin}
       />
 
       <div>

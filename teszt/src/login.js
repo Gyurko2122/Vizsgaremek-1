@@ -15,9 +15,11 @@ router.post("/login", async (req, res) => {
   const isPasswordCorrect = await bcrypt.compare(password, user.password);
   const isEmailCorrerct = email === user.email;
   if (isPasswordCorrect && isEmailCorrerct) {
-    res
-      .status(200)
-      .json({ message: "Sikeres bejelentkezés!", username: user.username });
+    res.status(200).json({
+      message: "Sikeres bejelentkezés!",
+      username: user.username,
+      isAdmin: user.isAdmin || false,
+    });
   } else {
     res.status(401).json({ message: "Hibás e-mail cím vagy jelszó!" });
   }

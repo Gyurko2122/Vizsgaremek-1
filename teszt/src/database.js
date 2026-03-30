@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 
 const { connect, Schema, model } = mongoose;
 
@@ -6,6 +7,53 @@ require("dotenv").config();
 
 const URI = process.env.MONGODB_URI;
 const Name = process.env.DATABASE_NAME;
+
+// --- Üzenet titkosítás (AES-256-CBC) ---
+const ENCRYPTION_KEY = (() => {
+  const key = process.env.MESSAGE_ENCRYPTION_KEY;
+  if (key && key.length === 64) return key;
+  console.warn(
+    "⚠️  MESSAGE_ENCRYPTION_KEY nincs beállítva. Állítsd be a .env fájlban (64 hex karakter)!",
+  );
+  return crypto
+    .createHash("sha256")
+    .update(key || "piacter-default-encryption-key-change-in-production")
+    .digest("hex");
+})();
+const IV_LENGTH = 16;
+
+function encryptMessage(text) {
+  if (!text) return text;
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY, "hex"),
+    iv,
+  );
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
+
+function decryptMessage(text) {
+  if (!text || !text.includes(":")) return text;
+  try {
+    const parts = text.split(":");
+    const iv = Buffer.from(parts.shift(), "hex");
+    const encrypted = parts.join(":");
+    const decipher = crypto.createDecipheriv(
+      "aes-256-cbc",
+      Buffer.from(ENCRYPTION_KEY, "hex"),
+      iv,
+    );
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (e) {
+    // Ha nem sikerül a visszafejtés, eredeti szöveg (régi, titkosítatlan üzenet)
+    return text;
+  }
+}
 
 console.log("Database.js - Attempting to connect to MongoDB...");
 
@@ -35,6 +83,11 @@ const Users = new Schema({
 const Users_model = model("Users", Users);
 
 const Products = new Schema({
+  publicId: {
+    type: String,
+    unique: true,
+    default: () => crypto.randomBytes(16).toString("hex"),
+  },
   productName: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
   location: { type: String, required: true, trim: true },
@@ -44,6 +97,8 @@ const Products = new Schema({
   createdBy: { type: String, required: true },
   createdAt: { type: Date, required: true, default: Date.now },
 });
+
+Products.index({ publicId: 1 });
 
 const Favorite = new Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
@@ -66,11 +121,18 @@ const MessageSchema = new Schema({
 });
 
 const ImageSchema = new Schema({
+  publicId: {
+    type: String,
+    unique: true,
+    default: () => crypto.randomBytes(16).toString("hex"),
+  },
   data: { type: Buffer, required: true },
   contentType: { type: String, required: true },
   filename: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
 });
+
+ImageSchema.index({ publicId: 1 });
 
 const Favorite_model = model("Favorite", Favorite);
 const Message_model = model("Message", MessageSchema);
@@ -84,4 +146,6 @@ module.exports = {
   Message_model,
   Favorite_model,
   Image_model,
+  encryptMessage,
+  decryptMessage,
 };
