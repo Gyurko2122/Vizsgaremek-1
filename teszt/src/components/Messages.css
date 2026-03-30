@@ -408,6 +408,7 @@
 .messages-chat-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -421,8 +422,11 @@
   padding: 0.8rem 1.1rem;
   border-radius: 12px;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
   font-size: 0.95rem;
   line-height: 1.4;
+  min-width: 0;
 }
 
 .messages-chat-bubble.sent {
@@ -537,5 +541,7 @@
 
   .messages-chat-bubble {
     max-width: 85%;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
