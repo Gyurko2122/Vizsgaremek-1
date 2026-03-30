@@ -846,6 +846,32 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
   }
 });
 
+// Beszélgetés törlése két felhasználó között
+app.delete("/api/conversations/:username/:partner", async (req, res) => {
+  try {
+    const { username, partner } = req.params;
+
+    if (!username || !partner) {
+      return res.status(400).json({ error: "Hiányzó paraméterek" });
+    }
+
+    const result = await Message_model.deleteMany({
+      $or: [
+        { fromUser: username, toUser: partner },
+        { fromUser: partner, toUser: username },
+      ],
+    });
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ error: "Szerver hiba a beszélgetés törlésekor" });
+  }
+});
+
 // --- FAVORITE ENDPOINTS ---
 
 // Felhasználó fiók törlése

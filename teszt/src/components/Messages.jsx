@@ -217,6 +217,35 @@ export default function Messages({
     }
   };
 
+  // Delete conversation
+  const handleDeleteConversation = async (conv, e) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        `Biztosan törölni szeretnéd a beszélgetést ${conv.partner} felhasználóval?`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/conversations/${encodeURIComponent(username)}/${encodeURIComponent(conv.partner)}`,
+        { method: "DELETE" },
+      );
+      if (response.ok) {
+        // If we're viewing this conversation, go back to inbox
+        if (selectedConv && selectedConv.partner === conv.partner) {
+          setSelectedConv(null);
+          setView("inbox");
+          setChatMessages([]);
+        }
+        fetchConversations();
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+    }
+  };
+
   // Search API call with debounce
   const performSearch = useCallback(async (query) => {
     if (!query || query.trim().length < 2) {
@@ -434,6 +463,13 @@ export default function Messages({
                         {conv.unreadCount}
                       </span>
                     )}
+                    <button
+                      className="messages-conv-delete-btn"
+                      onClick={(e) => handleDeleteConversation(conv, e)}
+                      title="Beszélgetés törlése"
+                    >
+                      🗑
+                    </button>
                   </div>
                 ))
               )}
