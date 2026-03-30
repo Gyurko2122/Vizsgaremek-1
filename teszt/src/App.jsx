@@ -26,7 +26,11 @@ function App() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+<<<<<<< HEAD
   const [showAdmin, setShowAdmin] = useState(false);
+=======
+  const [messageTarget, setMessageTarget] = useState(null);
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
 
   // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
   useEffect(() => {
@@ -157,11 +161,30 @@ function App() {
     const handlePathChange = () => {
       const path = window.location.pathname;
 
+<<<<<<< HEAD
       if (path === "/profile" && isLoggedIn) {
         setShowProfile(true);
         setShowProductDetail(false);
         setShowMessages(false);
         setShowAdmin(false);
+=======
+      if (path.startsWith("/profile")) {
+        const profileUser = path.split("/profile/")[1];
+        if (profileUser) {
+          setProfileUsername(decodeURIComponent(profileUser));
+          setShowProfile(true);
+          setShowProductDetail(false);
+          setShowMessages(false);
+        } else if (isLoggedIn) {
+          setProfileUsername(null);
+          setShowProfile(true);
+          setShowProductDetail(false);
+          setShowMessages(false);
+        } else {
+          window.history.pushState(null, "", "/");
+          setShowLogin(true);
+        }
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
       } else if (path === "/messages" && isLoggedIn) {
         setShowMessages(true);
         setShowProfile(false);
@@ -203,7 +226,12 @@ function App() {
         setShowMessages(false);
         setShowFavorites(false);
         setShowSearch(false);
+<<<<<<< HEAD
         setShowAdmin(false);
+=======
+        setProfileUsername(null);
+        setSelectedProductId(null);
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
       }
     };
 
@@ -216,9 +244,18 @@ function App() {
 
   // Handle /profile navigation
   const navigateToProfile = (targetUsername) => {
-    const user = targetUsername || username;
-    window.history.pushState(null, "", "/profile");
-    setProfileUsername(user);
+    const isOwn = !targetUsername || targetUsername === username;
+    if (isOwn && !isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
+    if (isOwn) {
+      window.history.pushState(null, "", "/profile");
+      setProfileUsername(null);
+    } else {
+      window.history.pushState(null, "", `/profile/${encodeURIComponent(targetUsername)}`);
+      setProfileUsername(targetUsername);
+    }
     setShowProfile(true);
     setShowMessages(false);
     setShowProductDetail(false);
@@ -266,6 +303,10 @@ function App() {
 
   // Handle messages navigation
   const navigateToMessages = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     window.history.pushState(null, "", "/messages");
     setShowMessages(true);
     setShowProfile(false);
@@ -276,6 +317,10 @@ function App() {
   };
 
   const navigateToFavorites = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
     window.history.pushState(null, "", "/favorites");
     setShowFavorites(true);
     setShowProfile(false);
@@ -300,6 +345,7 @@ function App() {
     );
   };
 
+<<<<<<< HEAD
   if (showAdmin && isLoggedIn && isAdmin) {
     return (
       <div
@@ -348,20 +394,27 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+=======
+  const renderPageContent = () => {
+    if (showMessages && isLoggedIn) {
+      return (
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
         <Messages
           username={username}
           onClose={() => {
             window.history.pushState(null, "", "/");
             setShowMessages(false);
+            setMessageTarget(null);
           }}
           onProfileClick={(targetUsername) => navigateToProfile(targetUsername)}
           onProductClick={(productId) => navigateToProductDetail(productId)}
+          initialPartner={messageTarget?.partner}
+          initialProductName={messageTarget?.productName}
         />
-        <Footer />
-      </div>
-    );
-  }
+      );
+    }
 
+<<<<<<< HEAD
   if (showProfile && isLoggedIn) {
     return (
       <div
@@ -379,10 +432,14 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+=======
+    if (showProfile && (isLoggedIn || profileUsername)) {
+      return (
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
         <Profile
           key={profileUsername || username}
           username={profileUsername || username}
-          isOwnProfile={!profileUsername || profileUsername === username}
+          isOwnProfile={isLoggedIn && (!profileUsername || profileUsername === username)}
           onBack={() => {
             window.history.pushState(null, "", "/");
             setShowProfile(false);
@@ -396,11 +453,10 @@ function App() {
           }}
           onProductClick={navigateToProductDetail}
         />
-        <Footer />
-      </div>
-    );
-  }
+      );
+    }
 
+<<<<<<< HEAD
   if (showProductDetail && selectedProductId) {
     return (
       <div
@@ -418,22 +474,30 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+=======
+    if (showProductDetail && selectedProductId) {
+      return (
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
         <div style={{ flex: 1 }}>
           <ProductDetail
             productId={selectedProductId}
             onBack={navigateFromProductDetail}
             isLoggedIn={isLoggedIn}
             currentUser={username}
+            onLoginClick={() => setShowLogin(true)}
             onSellerClick={(sellerUsername) =>
               navigateToProfile(sellerUsername)
             }
+            onMessageSent={(partner, productId, productName) => {
+              setMessageTarget({ partner, productId, productName });
+              navigateToMessages();
+            }}
           />
         </div>
-        <Footer />
-      </div>
-    );
-  }
+      );
+    }
 
+<<<<<<< HEAD
   if (showSearch) {
     return (
       <div
@@ -451,6 +515,10 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+=======
+    if (showSearch) {
+      return (
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
         <div style={{ flex: 1 }}>
           <SearchResults
             query={searchQuery}
@@ -464,11 +532,10 @@ function App() {
             }}
           />
         </div>
-        <Footer />
-      </div>
-    );
-  }
+      );
+    }
 
+<<<<<<< HEAD
   if (showFavorites && isLoggedIn) {
     return (
       <div
@@ -486,6 +553,10 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+=======
+    if (showFavorites && isLoggedIn) {
+      return (
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
         <div style={{ flex: 1 }}>
           <Favorites
             username={username}
@@ -496,10 +567,19 @@ function App() {
             }}
           />
         </div>
-        <Footer />
+      );
+    }
+
+    return (
+      <div style={{ flex: 1 }}>
+        <Body
+          onProductClick={navigateToProductDetail}
+          isLoggedIn={isLoggedIn}
+          currentUser={username}
+        />
       </div>
     );
-  }
+  };
 
   return (
     <div
@@ -518,53 +598,45 @@ function App() {
         onAdminClick={navigateToAdmin}
       />
 
-      <div>
-        {showLogin && (
-          <div className="modal-overlay" onClick={() => setShowLogin(false)}>
-            <div className="modal-window" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="modal-close"
-                onClick={() => setShowLogin(false)}
-              >
-                ×
-              </button>
-              <LoginBody
-                onRegisterClick={() => {
-                  setShowLogin(false);
-                  setShowRegister(true);
-                }}
-                onLoginSuccess={handleLoginSuccess}
-              />
-            </div>
+      {showLogin && (
+        <div className="modal-overlay" onClick={() => setShowLogin(false)}>
+          <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setShowLogin(false)}
+            >
+              ×
+            </button>
+            <LoginBody
+              onRegisterClick={() => {
+                setShowLogin(false);
+                setShowRegister(true);
+              }}
+              onLoginSuccess={handleLoginSuccess}
+            />
           </div>
-        )}
-        {showRegister && (
-          <div className="modal-overlay" onClick={() => setShowRegister(false)}>
-            <div className="modal-window" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="modal-close"
-                onClick={() => setShowRegister(false)}
-              >
-                ×
-              </button>
-              <RegisterBody
-                onLoginClick={() => {
-                  setShowRegister(false);
-                  setShowLogin(true);
-                }}
-              />
-            </div>
+        </div>
+      )}
+      {showRegister && (
+        <div className="modal-overlay" onClick={() => setShowRegister(false)}>
+          <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setShowRegister(false)}
+            >
+              ×
+            </button>
+            <RegisterBody
+              onLoginClick={() => {
+                setShowRegister(false);
+                setShowLogin(true);
+              }}
+            />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div style={{ flex: 1 }}>
-        <Body
-          onProductClick={navigateToProductDetail}
-          isLoggedIn={isLoggedIn}
-          currentUser={username}
-        />
-      </div>
+      {renderPageContent()}
 
       <Footer />
     </div>

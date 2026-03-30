@@ -54,11 +54,13 @@ export default function Profile({
       }
 
       // Termékleteöltés - szintén cache-bustig-gal
-      const productsResponse = await fetch(
-        `/api/products/user/${username}?t=${timestamp}`,
-      );
+      const productsUrl = `/api/products/user/${username}?t=${timestamp}`;
+      console.log("Fetching products from:", productsUrl);
+      const productsResponse = await fetch(productsUrl);
+      console.log("Products response status:", productsResponse.status);
       if (productsResponse.ok) {
         const products = await productsResponse.json();
+        console.log("Products received:", products.length, products);
         // Sort by createdAt descending (newest first)
         const sorted = products.sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
@@ -221,7 +223,7 @@ export default function Profile({
             {/* New Ad Card - Always First (only own profile) */}
             {isOwnProfile && (
               <div
-                className="ad-card new-ad-card-container"
+                className="new-ad-card-container"
                 onClick={() => setShowNewAdForm(true)}
               >
                 <div className="new-ad-placeholder">
@@ -237,7 +239,7 @@ export default function Profile({
               userAds.map((ad) => (
                 <div
                   key={ad._id}
-                  className="ad-card"
+                  className="profile-ad-card"
                   onClick={() => {
                     if (isOwnProfile) {
                       setEditingAdId(ad._id);
@@ -245,9 +247,8 @@ export default function Profile({
                       onProductClick(ad.publicId || ad._id);
                     }
                   }}
-                  style={{ cursor: "pointer" }}
                 >
-                  <div className="ad-card-image-container">
+                  <div className="profile-ad-card-img">
                     <img
                       src={fixImageUrl(
                         ad.imageUrl || (ad.images && ad.images[0]),
@@ -256,35 +257,22 @@ export default function Profile({
                       loading="lazy"
                       onError={(e) => {
                         e.target.src =
-                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ddd' width='200' height='200'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ddd' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23666'%3EKép nem elérhető%3C/text%3E%3C/svg%3E";
                       }}
                     />
                   </div>
-                  <div className="ad-card-info">
+                  <div className="profile-ad-card-info">
                     <h3>{ad.productName}</h3>
-                    <p className="ad-location">{ad.location}</p>
-                    <p className="ad-description">{ad.description}</p>
-                    <p className="ad-price">{ad.price} Ft</p>
+                    <p>{ad.location}</p>
+                    <p className="profile-ad-card-price">{ad.price} Ft</p>
                   </div>
                   {isOwnProfile && (
-                    <div
-                      className="ad-card-actions"
-                      style={{ display: "flex", gap: "8px" }}
-                    >
+                    <div className="profile-ad-card-actions">
                       <button
                         className="ad-delete-btn"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteAd(ad._id);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: "8px",
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
                         }}
                       >
                         Törlés

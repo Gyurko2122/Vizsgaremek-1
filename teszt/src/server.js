@@ -319,6 +319,7 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 // Termék lekérése publicId vagy _id alapján
 app.get("/api/products/:identifier", async (req, res) => {
   try {
@@ -352,6 +353,9 @@ app.get("/api/products/:identifier", async (req, res) => {
 });
 
 // Termékek lekérése felhasználó alapján
+=======
+// Termékek lekérése felhasználó alapján (MUST be before :id route)
+>>>>>>> 696094b8e6c420a8c3b27a2fea1dfec33e2ecd08
 app.get("/api/products/user/:username", async (req, res) => {
   try {
     const products = await Products_model.find({
@@ -376,6 +380,20 @@ app.get("/api/products/user/:username", async (req, res) => {
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ error: "Szerver hiba a termékek lekérésekor" });
+  }
+});
+
+// Termék lekérése ID alapján
+app.get("/api/products/:id", async (req, res) => {
+  try {
+    const product = await Products_model.findById(req.params.id).lean();
+    if (!product) {
+      return res.status(404).json({ error: "Termék nem található" });
+    }
+    res.json(product);
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ error: "Szerver hiba a termék lekérésekor" });
   }
 });
 
