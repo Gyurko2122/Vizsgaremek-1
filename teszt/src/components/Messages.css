@@ -180,6 +180,7 @@
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 0.25rem;
+  position: relative;
 }
 
 .messages-conv-item:hover {
@@ -188,6 +189,33 @@
 
 .messages-conv-item.active {
   background: #334155;
+}
+
+.messages-conv-delete-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.messages-conv-item:hover .messages-conv-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.messages-conv-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 .messages-conv-avatar {
