@@ -15,6 +15,22 @@ router.post("/login", async (req, res) => {
   const isPasswordCorrect = await bcrypt.compare(password, user.password);
   const isEmailCorrerct = email === user.email;
   if (isPasswordCorrect && isEmailCorrerct) {
+    // Felfüggesztés ellenőrzése
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      const until = new Date(user.suspendedUntil).toLocaleDateString("hu-HU");
+      const reason = user.suspensionReason || "Nincs megadva ok";
+      return res.status(403).json({
+        message: `A fiókod fel van függesztve ${until}-ig.`,
+        reason: reason,
+        suspendedUntil: user.suspendedUntil,
+      });
+    }
+    // Ha lejárt a felfüggesztés, töröljük
+    if (user.suspendedUntil && new Date(user.suspendedUntil) <= new Date()) {
+      user.suspendedUntil = null;
+      user.suspensionReason = null;
+      await user.save();
+    }
     res.status(200).json({
       message: "Sikeres bejelentkezés!",
       username: user.username,

@@ -78,6 +78,8 @@ const Users = new Schema({
   password: { type: String, required: true, minlength: 8 },
   picture: { type: String, required: false, trim: true },
   isAdmin: { type: Boolean, required: true },
+  suspendedUntil: { type: Date, default: null },
+  suspensionReason: { type: String, default: null },
 });
 
 const Users_model = model("Users", Users);

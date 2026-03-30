@@ -17,6 +17,9 @@ export default function AdminPanel({ username, onClose }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [suspendModal, setSuspendModal] = useState(null); // { userId, username }
+  const [suspendDays, setSuspendDays] = useState(3);
+  const [suspendReason, setSuspendReason] = useState("");
 
   const adminHeaders = {
     "Content-Type": "application/json",
@@ -121,6 +124,58 @@ export default function AdminPanel({ username, onClose }) {
     }
   };
 
+  const handleSuspendUser = async () => {
+    if (!suspendModal) return;
+    setActionLoading(suspendModal.userId);
+    try {
+      const res = await fetch(
+        `/api/admin/users/${suspendModal.userId}/suspend`,
+        {
+          method: "POST",
+          headers: adminHeaders,
+          body: JSON.stringify({ days: suspendDays, reason: suspendReason }),
+        },
+      );
+      if (res.ok) {
+        setSuspendModal(null);
+        setSuspendDays(3);
+        setSuspendReason("");
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Hiba történt");
+      }
+    } catch (e) {
+      alert("Hiba a felfüggesztés során");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUnsuspendUser = async (userId) => {
+    setActionLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/unsuspend`, {
+        method: "POST",
+        headers: adminHeaders,
+      });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Hiba történt");
+      }
+    } catch (e) {
+      alert("Hiba a feloldás során");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const isUserSuspended = (user) => {
+    return user.suspendedUntil && new Date(user.suspendedUntil) > new Date();
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -186,6 +241,7 @@ export default function AdminPanel({ username, onClose }) {
                       <th style={styles.th}>Felhasználónév</th>
                       <th style={styles.th}>Email</th>
                       <th style={styles.th}>Admin</th>
+                      <th style={styles.th}>Státusz</th>
                       <th style={styles.th}>Művelet</th>
                     </tr>
                   </thead>
@@ -214,18 +270,94 @@ export default function AdminPanel({ username, onClose }) {
                           )}
                         </td>
                         <td style={styles.td}>
+                          {isUserSuspended(user) ? (
+                            <div>
+                              <span style={styles.badgeSuspended}>
+                                Felfüggesztve
+                              </span>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#94a3b8",
+                                  marginTop: "4px",
+                                }}
+                              >
+                                {new Date(
+                                  user.suspendedUntil,
+                                ).toLocaleDateString("hu-HU")}
+                                -ig
+                              </div>
+                              {user.suspensionReason && (
+                                <div
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    color: "#64748b",
+                                    marginTop: "2px",
+                                  }}
+                                >
+                                  Ok: {user.suspensionReason}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={styles.badgeActive}>Aktív</span>
+                          )}
+                        </td>
+                        <td style={styles.td}>
                           {user.username === username ? (
                             <span style={styles.youLabel}>Te</span>
-                          ) : (
-                            <button
-                              style={styles.deleteBtn}
-                              disabled={actionLoading === user._id}
-                              onClick={() =>
-                                handleDeleteUser(user._id, user.username)
-                              }
+                          ) : user.isAdmin ? (
+                            <span
+                              style={{
+                                color: "#64748b",
+                                fontStyle: "italic",
+                                fontSize: "0.85rem",
+                              }}
                             >
-                              {actionLoading === user._id ? "..." : "Törlés"}
-                            </button>
+                              Admin
+                            </span>
+                          ) : (
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "0.4rem",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {isUserSuspended(user) ? (
+                                <button
+                                  style={styles.unsuspendBtn}
+                                  disabled={actionLoading === user._id}
+                                  onClick={() => handleUnsuspendUser(user._id)}
+                                >
+                                  {actionLoading === user._id
+                                    ? "..."
+                                    : "Feloldás"}
+                                </button>
+                              ) : (
+                                <button
+                                  style={styles.suspendBtn}
+                                  disabled={actionLoading === user._id}
+                                  onClick={() =>
+                                    setSuspendModal({
+                                      userId: user._id,
+                                      username: user.username,
+                                    })
+                                  }
+                                >
+                                  Felfüggesztés
+                                </button>
+                              )}
+                              <button
+                                style={styles.deleteBtn}
+                                disabled={actionLoading === user._id}
+                                onClick={() =>
+                                  handleDeleteUser(user._id, user.username)
+                                }
+                              >
+                                {actionLoading === user._id ? "..." : "Törlés"}
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -309,6 +441,81 @@ export default function AdminPanel({ username, onClose }) {
           )}
         </div>
       </div>
+
+      {/* Suspend Modal */}
+      {suspendModal && (
+        <div style={styles.modalOverlay} onClick={() => setSuspendModal(null)}>
+          <div style={styles.modalBox} onClick={(e) => e.stopPropagation()}>
+            <h3
+              style={{
+                color: "#f1f5f9",
+                marginBottom: "1rem",
+                fontSize: "1.2rem",
+              }}
+            >
+              🚫 Felhasználó felfüggesztése
+            </h3>
+            <p style={{ color: "#94a3b8", marginBottom: "1.2rem" }}>
+              <strong style={{ color: "#e2e8f0" }}>
+                {suspendModal.username}
+              </strong>{" "}
+              felfüggesztése
+            </p>
+
+            <label style={styles.modalLabel}>Időtartam</label>
+            <div
+              style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}
+            >
+              {[3, 7, 14].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  style={{
+                    ...styles.dayBtn,
+                    ...(suspendDays === d ? styles.dayBtnActive : {}),
+                  }}
+                  onClick={() => setSuspendDays(d)}
+                >
+                  {d} nap
+                </button>
+              ))}
+            </div>
+
+            <label style={styles.modalLabel}>Indoklás</label>
+            <textarea
+              style={styles.modalTextarea}
+              placeholder="Írd le miért kerül felfüggesztésre..."
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              rows={3}
+            />
+
+            <div
+              style={{ display: "flex", gap: "0.8rem", marginTop: "1.2rem" }}
+            >
+              <button
+                style={styles.modalCancelBtn}
+                onClick={() => {
+                  setSuspendModal(null);
+                  setSuspendDays(3);
+                  setSuspendReason("");
+                }}
+              >
+                Mégse
+              </button>
+              <button
+                style={styles.modalConfirmBtn}
+                disabled={actionLoading === suspendModal.userId}
+                onClick={handleSuspendUser}
+              >
+                {actionLoading === suspendModal.userId
+                  ? "..."
+                  : `Felfüggesztés (${suspendDays} nap)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -469,6 +676,124 @@ const styles = {
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "0.85rem",
+    fontWeight: "600",
+    transition: "background 0.2s",
+  },
+  suspendBtn: {
+    background: "#713f12",
+    color: "#fde68a",
+    border: "none",
+    padding: "0.4rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    transition: "background 0.2s",
+  },
+  unsuspendBtn: {
+    background: "#14532d",
+    color: "#86efac",
+    border: "none",
+    padding: "0.4rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    transition: "background 0.2s",
+  },
+  badgeSuspended: {
+    background: "#713f12",
+    color: "#fde68a",
+    padding: "0.2rem 0.7rem",
+    borderRadius: "9999px",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+  },
+  badgeActive: {
+    background: "#14532d",
+    color: "#86efac",
+    padding: "0.2rem 0.7rem",
+    borderRadius: "9999px",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modalBox: {
+    background: "#1e293b",
+    borderRadius: "12px",
+    padding: "2rem",
+    maxWidth: "450px",
+    width: "90%",
+    border: "1px solid #334155",
+  },
+  modalLabel: {
+    display: "block",
+    color: "#94a3b8",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    marginBottom: "0.4rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  modalTextarea: {
+    width: "100%",
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: "6px",
+    color: "#e2e8f0",
+    padding: "0.7rem",
+    fontSize: "0.95rem",
+    resize: "vertical",
+    fontFamily: "inherit",
+    boxSizing: "border-box",
+  },
+  dayBtn: {
+    background: "#0f172a",
+    color: "#94a3b8",
+    border: "1px solid #334155",
+    padding: "0.5rem 1.2rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    transition: "all 0.2s",
+  },
+  dayBtnActive: {
+    background: "#713f12",
+    color: "#fde68a",
+    borderColor: "#f59e0b",
+  },
+  modalCancelBtn: {
+    flex: 1,
+    background: "none",
+    border: "1px solid #475569",
+    color: "#cbd5e1",
+    padding: "0.6rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.95rem",
+    fontWeight: "600",
+  },
+  modalConfirmBtn: {
+    flex: 2,
+    background: "#713f12",
+    color: "#fde68a",
+    border: "none",
+    padding: "0.6rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.95rem",
     fontWeight: "600",
     transition: "background 0.2s",
   },
