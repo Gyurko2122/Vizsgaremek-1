@@ -14,7 +14,9 @@ export default function Favorites({ username, onProductClick, onClose }) {
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const response = await fetch(`/api/favorites/${username}/products`);
+        const response = await fetch(`/api/favorites/${username}/products`, {
+          headers: authHeaders(),
+        });
         if (response.ok) {
           const data = await response.json();
           setProducts(data);

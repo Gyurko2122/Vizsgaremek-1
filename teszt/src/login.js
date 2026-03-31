@@ -21,6 +21,12 @@ const JWT_SECRET = (() => {
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
+
+  // NoSQL injection védelem - csak string típust fogadunk el
+  if (typeof email !== "string" || typeof password !== "string") {
+    return res.status(400).json({ message: "Érvénytelen bemenet" });
+  }
+
   const user = await Users_model.findOne({ email: email });
   if (!user) {
     return res

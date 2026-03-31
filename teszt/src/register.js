@@ -25,6 +25,15 @@ router.post("/register", async (req, res) => {
     const email = req.body?.email;
     const password = req.body?.password;
 
+    // NoSQL injection védelem - csak string típust fogadunk el
+    if (
+      typeof username !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({ message: "Érvénytelen bemenet" });
+    }
+
     if (!username || !email || !password) {
       return res.status(400).json({
         message: "Hiányzó mezők: username, email, password szükséges.",
