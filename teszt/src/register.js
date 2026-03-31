@@ -34,6 +34,13 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Érvénytelen bemenet" });
     }
 
+    // Admin jogosultság kívülről nem állítható be - minden kísérletet elutasítunk
+    if (req.body.isAdmin !== undefined || req.body.role !== undefined) {
+      return res
+        .status(403)
+        .json({ message: "Jogosultság manipuláció nem engedélyezett" });
+    }
+
     if (!username || !email || !password) {
       return res.status(400).json({
         message: "Hiányzó mezők: username, email, password szükséges.",
