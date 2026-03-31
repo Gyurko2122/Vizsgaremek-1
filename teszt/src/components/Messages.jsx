@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import "./Messages.css";
+import { authHeaders } from "../auth";
 
 const fixImageUrl = (url) => {
   if (!url) return null;
@@ -165,7 +166,7 @@ export default function Messages({
         if (unreadIds.length > 0) {
           await fetch("/api/messages/mark-read", {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: authHeaders(),
             body: JSON.stringify({ messageIds: unreadIds }),
           });
           if (socketRef.current) {
@@ -230,7 +231,7 @@ export default function Messages({
     try {
       const response = await fetch(
         `/api/conversations/${encodeURIComponent(username)}/${encodeURIComponent(conv.partner)}`,
-        { method: "DELETE" },
+        { method: "DELETE", headers: authHeaders(null) },
       );
       if (response.ok) {
         // If we're viewing this conversation, go back to inbox

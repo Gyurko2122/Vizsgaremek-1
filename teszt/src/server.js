@@ -4,8 +4,10 @@ const path = require("path");
 const multer = require("multer");
 const http = require("http");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const login = require("./login");
+const { JWT_SECRET } = require("./login");
 const register = require("./register");
 const {
   Users_model,
@@ -134,17 +136,34 @@ app.use((req, res, next) => {
 app.use("/api", register);
 app.use("/api", login);
 
-// --- isAdmin Middleware ---
+// --- JWT Auth Middleware ---
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ error: "Nincs bejelentkezve (hiányzó token)" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // { username, isAdmin }
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Érvénytelen vagy lejárt token" });
+  }
+};
+
+// --- isAdmin Middleware (JWT alapú) ---
 const isAdminMiddleware = async (req, res, next) => {
-  const username =
-    req.headers["x-admin-username"] ||
-    req.body?.username ||
-    req.query?.username;
-  if (!username) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Nincs bejelentkezve" });
   }
+  const token = authHeader.split(" ")[1];
   try {
-    const user = await Users_model.findOne({ username });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await Users_model.findOne({ username: decoded.username });
     if (!user || !user.isAdmin) {
       return res.status(403).json({ error: "Nincs admin jogosultság" });
     }
@@ -251,6 +270,7 @@ const uploadProfilePicHandler = (req, res, next) => {
 
 app.post(
   "/api/upload/profile-picture",
+  authMiddleware,
   uploadProfilePicHandler,
   async (req, res) => {
     try {
@@ -258,11 +278,7 @@ app.post(
         return res.status(400).json({ error: "Nincs file feltöltve" });
       }
 
-      const username = req.query.username;
-
-      if (!username) {
-        return res.status(400).json({ error: "Felhasználónév hiányzik" });
-      }
+      const username = req.user.username;
 
       // Kép mentése MongoDB-be
       const newImage = new Image_model({
@@ -380,17 +396,11 @@ app.get("/api/products/:identifier", async (req, res) => {
 });
 
 // Új termék létrehozása
-app.post("/api/products", async (req, res) => {
+app.post("/api/products", authMiddleware, async (req, res) => {
   try {
-    const {
-      username,
-      productName,
-      description,
-      location,
-      price,
-      imageUrl,
-      images,
-    } = req.body;
+    const { productName, description, location, price, imageUrl, images } =
+      req.body;
+    const username = req.user.username;
 
     if (
       !username ||
@@ -447,6 +457,7 @@ const uploadProductImageHandler = (req, res, next) => {
 
 app.post(
   "/api/upload/product-image",
+  authMiddleware,
   uploadProductImageHandler,
   async (req, res) => {
     try {
@@ -486,6 +497,7 @@ const uploadMultipleProductImagesHandler = (req, res, next) => {
 
 app.post(
   "/api/upload/product-images",
+  authMiddleware,
   uploadMultipleProductImagesHandler,
   async (req, res) => {
     try {
@@ -514,21 +526,11 @@ app.post(
 );
 
 // Termék szerkesztése
-app.put("/api/products/:id", async (req, res) => {
+app.put("/api/products/:id", authMiddleware, async (req, res) => {
   try {
-    const {
-      username,
-      productName,
-      description,
-      location,
-      price,
-      imageUrl,
-      images,
-    } = req.body;
-
-    if (!username) {
-      return res.status(400).json({ error: "Felhasználónév hiányzik" });
-    }
+    const { productName, description, location, price, imageUrl, images } =
+      req.body;
+    const username = req.user.username;
 
     const product = await Products_model.findById(req.params.id);
 
@@ -579,13 +581,9 @@ app.put("/api/products/:id", async (req, res) => {
 });
 
 // Termék törlése
-app.delete("/api/products/:id", async (req, res) => {
+app.delete("/api/products/:id", authMiddleware, async (req, res) => {
   try {
-    const { username } = req.body;
-
-    if (!username) {
-      return res.status(400).json({ error: "Felhasználónév hiányzik" });
-    }
+    const username = req.user.username;
 
     const product = await Products_model.findById(req.params.id);
 
@@ -650,14 +648,13 @@ app.get("/api/search", async (req, res) => {
 });
 
 // Üzenet küldése
-app.post("/api/messages", async (req, res) => {
+app.post("/api/messages", authMiddleware, async (req, res) => {
   try {
-    const { fromUser, toUser, message, productId, productName } = req.body;
+    const { toUser, message, productId, productName } = req.body;
+    const fromUser = req.user.username;
 
-    if (!fromUser || !toUser || !message) {
-      return res
-        .status(400)
-        .json({ error: "Hiányzó mezők: fromUser, toUser, message" });
+    if (!toUser || !message) {
+      return res.status(400).json({ error: "Hiányzó mezők: toUser, message" });
     }
 
     if (fromUser === toUser) {
@@ -799,7 +796,7 @@ app.get("/api/messages/unread/:username", async (req, res) => {
 });
 
 // Üzenetek olvasottnak jelölése
-app.put("/api/messages/mark-read", async (req, res) => {
+app.put("/api/messages/mark-read", authMiddleware, async (req, res) => {
   try {
     const { messageIds } = req.body;
     if (!messageIds || messageIds.length === 0) {
@@ -847,38 +844,50 @@ app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
 });
 
 // Beszélgetés törlése két felhasználó között
-app.delete("/api/conversations/:username/:partner", async (req, res) => {
-  try {
-    const { username, partner } = req.params;
+app.delete(
+  "/api/conversations/:username/:partner",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const username = req.user.username;
+      const { partner } = req.params;
 
-    if (!username || !partner) {
-      return res.status(400).json({ error: "Hiányzó paraméterek" });
+      if (!username || !partner) {
+        return res.status(400).json({ error: "Hiányzó paraméterek" });
+      }
+
+      const result = await Message_model.deleteMany({
+        $or: [
+          { fromUser: username, toUser: partner },
+          { fromUser: partner, toUser: username },
+        ],
+      });
+
+      res.json({
+        success: true,
+        deletedCount: result.deletedCount,
+      });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({ error: "Szerver hiba a beszélgetés törlésekor" });
     }
-
-    const result = await Message_model.deleteMany({
-      $or: [
-        { fromUser: username, toUser: partner },
-        { fromUser: partner, toUser: username },
-      ],
-    });
-
-    res.json({
-      success: true,
-      deletedCount: result.deletedCount,
-    });
-  } catch (error) {
-    console.error("Error deleting conversation:", error);
-    res.status(500).json({ error: "Szerver hiba a beszélgetés törlésekor" });
-  }
-});
+  },
+);
 
 // --- FAVORITE ENDPOINTS ---
 
 // Felhasználó fiók törlése
-app.delete("/api/user/:username", async (req, res) => {
+app.delete("/api/user/:username", authMiddleware, async (req, res) => {
   try {
     const { username } = req.params;
     const { confirmUsername } = req.body;
+
+    // Ellenőrizzük, hogy a token tulajdonosa törli a saját fiókját
+    if (req.user.username !== username) {
+      return res
+        .status(403)
+        .json({ error: "Nincs jogosultságod törölni ezt a fiókot" });
+    }
 
     if (!confirmUsername || confirmUsername !== username) {
       return res
@@ -950,10 +959,11 @@ app.get("/api/favorites/:username/products", async (req, res) => {
 });
 
 // Kedvenc hozzáadása
-app.post("/api/favorites", async (req, res) => {
+app.post("/api/favorites", authMiddleware, async (req, res) => {
   try {
-    const { username, productId } = req.body;
-    if (!username || !productId) {
+    const username = req.user.username;
+    const { productId } = req.body;
+    if (!productId) {
       return res.status(400).json({ error: "Hiányzó mezők" });
     }
     const user = await Users_model.findOne({ username });
@@ -977,10 +987,11 @@ app.post("/api/favorites", async (req, res) => {
 });
 
 // Kedvenc eltávolítása
-app.delete("/api/favorites", async (req, res) => {
+app.delete("/api/favorites", authMiddleware, async (req, res) => {
   try {
-    const { username, productId } = req.body;
-    if (!username || !productId) {
+    const username = req.user.username;
+    const { productId } = req.body;
+    if (!productId) {
       return res.status(400).json({ error: "Hiányzó mezők" });
     }
     const user = await Users_model.findOne({ username });
@@ -1002,13 +1013,17 @@ app.delete("/api/favorites", async (req, res) => {
 
 // Admin jogosultság ellenőrzése
 app.get("/api/admin/check", async (req, res) => {
-  const username = req.query.username;
-  if (!username) return res.status(401).json({ isAdmin: false });
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(200).json({ isAdmin: false });
+  }
   try {
-    const user = await Users_model.findOne({ username });
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await Users_model.findOne({ username: decoded.username });
     res.json({ isAdmin: user ? user.isAdmin === true : false });
   } catch (e) {
-    res.status(500).json({ isAdmin: false });
+    res.status(200).json({ isAdmin: false });
   }
 });
 
