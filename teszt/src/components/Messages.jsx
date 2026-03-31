@@ -130,7 +130,9 @@ export default function Messages({
   // Fetch conversations
   const fetchConversations = async () => {
     try {
-      const response = await fetch(`/api/conversations/${username}`);
+      const response = await fetch(`/api/conversations/${username}`, {
+        headers: authHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setConversations(data);
@@ -154,7 +156,12 @@ export default function Messages({
     setView("chat");
 
     try {
-      const response = await fetch(`/api/messages/${username}/${conv.partner}`);
+      const response = await fetch(
+        `/api/messages/${username}/${conv.partner}`,
+        {
+          headers: authHeaders(),
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         setChatMessages(data);

@@ -11,7 +11,7 @@ import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
 import SearchResults from "./components/SearchResults";
 import AdminPanel from "./components/AdminPanel";
-import { setAuthToken, clearAuthToken } from "./auth";
+import { getAuthToken, setAuthToken, clearAuthToken } from "./auth";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -32,42 +32,68 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
+  // JWT token szerver-oldali ellenőrzéssel
   useEffect(() => {
     const rememberMe = localStorage.getItem("rememberMe") === "true";
-    let savedUsername, savedIsLoggedIn;
 
-    if (rememberMe) {
-      savedUsername = localStorage.getItem("username");
-      savedIsLoggedIn = localStorage.getItem("isLoggedIn");
-    } else {
-      savedUsername = sessionStorage.getItem("username");
-      savedIsLoggedIn = sessionStorage.getItem("isLoggedIn");
-    }
-
-    if (savedIsLoggedIn === "true" && savedUsername) {
-      // Ha nem "remember me", ellenőrizzük a 20 perces lejáratot
-      if (!rememberMe) {
-        const loginTime = parseInt(sessionStorage.getItem("loginTime"), 10);
-        const now = Date.now();
-        const twentyMinutes = 20 * 60 * 1000;
-        if (!loginTime || now - loginTime > twentyMinutes) {
-          // Lejárt a munkamenet
-          sessionStorage.removeItem("isLoggedIn");
-          sessionStorage.removeItem("username");
-          sessionStorage.removeItem("loginTime");
-          sessionStorage.removeItem("isAdmin");
-          localStorage.removeItem("rememberMe");
-          return;
-        }
+    // Ha nem "remember me", ellenőrizzük a 20 perces lejáratot
+    if (!rememberMe) {
+      const loginTime = parseInt(sessionStorage.getItem("loginTime"), 10);
+      const now = Date.now();
+      const twentyMinutes = 20 * 60 * 1000;
+      if (!loginTime || now - loginTime > twentyMinutes) {
+        // Lejárt a munkamenet — töröljük a helyi adatokat
+        sessionStorage.removeItem("isLoggedIn");
+        sessionStorage.removeItem("username");
+        sessionStorage.removeItem("loginTime");
+        sessionStorage.removeItem("isAdmin");
+        localStorage.removeItem("rememberMe");
+        clearAuthToken();
+        return;
       }
-      setIsLoggedIn(true);
-      setUsername(savedUsername);
-      // isAdmin visszaállítása
-      const savedIsAdmin = rememberMe
-        ? localStorage.getItem("isAdmin")
-        : sessionStorage.getItem("isAdmin");
-      setIsAdmin(savedIsAdmin === "true");
     }
+
+    // JWT token ellenőrzése a szerverrel
+    const token = getAuthToken();
+    if (!token) {
+      // Nincs token — nem vagyunk bejelentkezve, töröljük a helyi adatokat
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("username");
+      localStorage.removeItem("isAdmin");
+      sessionStorage.removeItem("isLoggedIn");
+      sessionStorage.removeItem("username");
+      sessionStorage.removeItem("isAdmin");
+      return;
+    }
+
+    fetch("/api/verify-token", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Invalid token");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.valid) {
+          setIsLoggedIn(true);
+          setUsername(data.username);
+          setIsAdmin(data.isAdmin || false);
+        } else {
+          throw new Error("Token invalid");
+        }
+      })
+      .catch(() => {
+        // Érvénytelen token — teljes kijelentkeztetés
+        clearAuthToken();
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("username");
+        localStorage.removeItem("rememberMe");
+        localStorage.removeItem("isAdmin");
+        sessionStorage.removeItem("isLoggedIn");
+        sessionStorage.removeItem("username");
+        sessionStorage.removeItem("loginTime");
+        sessionStorage.removeItem("isAdmin");
+      });
   }, []);
 
   // 20 perces automatikus kijelentkeztetés ha nem "Bejelentkezve maradok"

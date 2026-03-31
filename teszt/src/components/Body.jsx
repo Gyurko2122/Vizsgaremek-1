@@ -43,7 +43,9 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
     if (!isLoggedIn || !currentUser) return;
     const fetchFavorites = async () => {
       try {
-        const response = await fetch(`/api/favorites/${currentUser}`);
+        const response = await fetch(`/api/favorites/${currentUser}`, {
+          headers: authHeaders(),
+        });
         if (response.ok) {
           const data = await response.json();
           setFavorites(new Set(data.productIds));

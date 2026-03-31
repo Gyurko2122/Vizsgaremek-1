@@ -5,6 +5,7 @@ const multer = require("multer");
 const http = require("http");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const mongoSanitize = require("express-mongo-sanitize");
 const { Server } = require("socket.io");
 const login = require("./login");
 const { JWT_SECRET } = require("./login");
@@ -46,6 +47,13 @@ io.on("connection", (socket) => {
     try {
       const { fromUser, toUser, message, productId, productName } = data;
       if (!fromUser || !toUser || !message) return;
+      // NoSQL injection védelem
+      if (
+        typeof fromUser !== "string" ||
+        typeof toUser !== "string" ||
+        typeof message !== "string"
+      )
+        return;
 
       const newMessage = new Message_model({
         fromUser: fromUser.trim(),
@@ -94,7 +102,12 @@ io.on("connection", (socket) => {
   socket.on("markAsRead", async (data) => {
     try {
       const { messageIds } = data;
-      if (messageIds && messageIds.length > 0) {
+      if (
+        messageIds &&
+        Array.isArray(messageIds) &&
+        messageIds.every((id) => typeof id === "string") &&
+        messageIds.length > 0
+      ) {
         await Message_model.updateMany(
           { _id: { $in: messageIds } },
           { isRead: true },
@@ -121,6 +134,7 @@ console.log("Server.js - Starting initialization...");
 // --- Middleware Beállítások ---
 app.use(cors());
 app.use(express.json());
+app.use(mongoSanitize()); // NoSQL injection védelem - eltávolítja a $ és . operátorokat
 app.set("trust proxy", 1);
 
 // CSP Header beállítása - engedékeny biztonsági politika
@@ -153,6 +167,32 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: "Érvénytelen vagy lejárt token" });
   }
 };
+
+// --- Token ellenőrzés endpoint (frontend session restore) ---
+app.get("/api/verify-token", authMiddleware, async (req, res) => {
+  try {
+    const user = await Users_model.findOne({ username: req.user.username });
+    if (!user) {
+      return res
+        .status(401)
+        .json({ valid: false, error: "Felhasználó nem található" });
+    }
+    // Felfüggesztés ellenőrzése
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      return res
+        .status(403)
+        .json({ valid: false, error: "Fiók felfüggesztve" });
+    }
+    res.json({
+      valid: true,
+      username: user.username,
+      isAdmin: user.isAdmin || false,
+    });
+  } catch (error) {
+    console.error("Token verify error:", error);
+    res.status(500).json({ valid: false, error: "Szerver hiba" });
+  }
+});
 
 // --- isAdmin Middleware (JWT alapú) ---
 const isAdminMiddleware = async (req, res, next) => {
@@ -653,6 +693,11 @@ app.post("/api/messages", authMiddleware, async (req, res) => {
     const { toUser, message, productId, productName } = req.body;
     const fromUser = req.user.username;
 
+    // NoSQL injection védelem
+    if (typeof toUser !== "string" || typeof message !== "string") {
+      return res.status(400).json({ error: "Érvénytelen bemenet" });
+    }
+
     if (!toUser || !message) {
       return res.status(400).json({ error: "Hiányzó mezők: toUser, message" });
     }
@@ -714,9 +759,12 @@ app.post("/api/messages", authMiddleware, async (req, res) => {
 });
 
 // Beszélgetések lekérése egy felhasználóhoz (csoportosítva partner + termék alapján)
-app.get("/api/conversations/:username", async (req, res) => {
+app.get("/api/conversations/:username", authMiddleware, async (req, res) => {
   try {
     const { username } = req.params;
+    if (req.user.username !== username) {
+      return res.status(403).json({ error: "Nincs jogosultságod" });
+    }
     const messages = await Message_model.find({
       $or: [{ fromUser: username }, { toUser: username }],
     })
@@ -782,8 +830,11 @@ app.get("/api/conversations/:username", async (req, res) => {
 });
 
 // Olvasatlan üzenetek száma
-app.get("/api/messages/unread/:username", async (req, res) => {
+app.get("/api/messages/unread/:username", authMiddleware, async (req, res) => {
   try {
+    if (req.user.username !== req.params.username) {
+      return res.status(403).json({ error: "Nincs jogosultságod" });
+    }
     const count = await Message_model.countDocuments({
       toUser: req.params.username,
       isRead: false,
@@ -799,8 +850,12 @@ app.get("/api/messages/unread/:username", async (req, res) => {
 app.put("/api/messages/mark-read", authMiddleware, async (req, res) => {
   try {
     const { messageIds } = req.body;
-    if (!messageIds || messageIds.length === 0) {
+    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
       return res.status(400).json({ error: "Hiányzó messageIds" });
+    }
+    // NoSQL injection védelem - csak string ID-ket fogadunk el
+    if (!messageIds.every((id) => typeof id === "string")) {
+      return res.status(400).json({ error: "Érvénytelen messageIds" });
     }
     await Message_model.updateMany(
       { _id: { $in: messageIds } },
@@ -814,12 +869,17 @@ app.put("/api/messages/mark-read", authMiddleware, async (req, res) => {
 });
 
 // Üzenetek lekérése két felhasználó között
-app.get("/api/messages/:fromUser/:toUser", async (req, res) => {
+app.get("/api/messages/:fromUser/:toUser", authMiddleware, async (req, res) => {
   try {
     const { fromUser, toUser } = req.params;
 
     if (!fromUser || !toUser) {
       return res.status(400).json({ error: "Hiányzó paraméterek" });
+    }
+
+    // Csak a saját üzeneteit kérheti le
+    if (req.user.username !== fromUser && req.user.username !== toUser) {
+      return res.status(403).json({ error: "Nincs jogosultságod" });
     }
 
     const messages = await Message_model.find({
@@ -922,7 +982,7 @@ app.delete("/api/user/:username", authMiddleware, async (req, res) => {
 });
 
 // Kedvencek lekérése felhasználónév alapján
-app.get("/api/favorites/:username", async (req, res) => {
+app.get("/api/favorites/:username", authMiddleware, async (req, res) => {
   try {
     const user = await Users_model.findOne({ username: req.params.username });
     if (!user) {
@@ -938,33 +998,37 @@ app.get("/api/favorites/:username", async (req, res) => {
 });
 
 // Kedvenc termékek adatainak lekérése felhasználónév alapján
-app.get("/api/favorites/:username/products", async (req, res) => {
-  try {
-    const user = await Users_model.findOne({ username: req.params.username });
-    if (!user) {
-      return res.status(404).json({ error: "Felhasználó nem található" });
+app.get(
+  "/api/favorites/:username/products",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const user = await Users_model.findOne({ username: req.params.username });
+      if (!user) {
+        return res.status(404).json({ error: "Felhasználó nem található" });
+      }
+      const favorites = await Favorite_model.find({ user: user._id })
+        .sort({ favoritedAt: -1 })
+        .lean();
+      const productIds = favorites.map((f) => f.product);
+      const products = await Products_model.find({
+        _id: { $in: productIds },
+      }).lean();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching favorite products:", error);
+      res.status(500).json({ error: "Szerver hiba" });
     }
-    const favorites = await Favorite_model.find({ user: user._id })
-      .sort({ favoritedAt: -1 })
-      .lean();
-    const productIds = favorites.map((f) => f.product);
-    const products = await Products_model.find({
-      _id: { $in: productIds },
-    }).lean();
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching favorite products:", error);
-    res.status(500).json({ error: "Szerver hiba" });
-  }
-});
+  },
+);
 
 // Kedvenc hozzáadása
 app.post("/api/favorites", authMiddleware, async (req, res) => {
   try {
     const username = req.user.username;
     const { productId } = req.body;
-    if (!productId) {
-      return res.status(400).json({ error: "Hiányzó mezők" });
+    if (!productId || typeof productId !== "string") {
+      return res.status(400).json({ error: "Hiányzó vagy érvénytelen mezők" });
     }
     const user = await Users_model.findOne({ username });
     if (!user) {
@@ -991,8 +1055,8 @@ app.delete("/api/favorites", authMiddleware, async (req, res) => {
   try {
     const username = req.user.username;
     const { productId } = req.body;
-    if (!productId) {
-      return res.status(400).json({ error: "Hiányzó mezők" });
+    if (!productId || typeof productId !== "string") {
+      return res.status(400).json({ error: "Hiányzó vagy érvénytelen mezők" });
     }
     const user = await Users_model.findOne({ username });
     if (!user) {
