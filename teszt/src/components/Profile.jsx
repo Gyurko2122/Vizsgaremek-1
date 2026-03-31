@@ -300,7 +300,9 @@ export default function Profile({
             ) : (
               !loading && (
                 <p style={{ gridColumn: "1 / -1" }}>
-                  Még nincsenek hirdetéseid
+                  {isOwnProfile
+                    ? "Még nincsenek hirdetéseid"
+                    : `Még nincsenek hirdetései`}
                 </p>
               )
             )}
