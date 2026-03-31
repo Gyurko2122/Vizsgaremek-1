@@ -5,7 +5,6 @@ const multer = require("multer");
 const http = require("http");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const mongoSanitize = require("express-mongo-sanitize");
 const { Server } = require("socket.io");
 const login = require("./login");
 const { JWT_SECRET } = require("./login");
@@ -134,7 +133,26 @@ console.log("Server.js - Starting initialization...");
 // --- Middleware Beállítások ---
 app.use(cors());
 app.use(express.json());
-app.use(mongoSanitize()); // NoSQL injection védelem - eltávolítja a $ és . operátorokat
+
+// NoSQL injection védelem - saját sanitize middleware (Express 5 kompatibilis)
+function sanitizeValue(val) {
+  if (typeof val === "string") return val;
+  if (Array.isArray(val)) return val.map(sanitizeValue);
+  if (val && typeof val === "object") {
+    const clean = {};
+    for (const key of Object.keys(val)) {
+      if (key.startsWith("$") || key.includes(".")) continue;
+      clean[key] = sanitizeValue(val[key]);
+    }
+    return clean;
+  }
+  return val;
+}
+app.use((req, res, next) => {
+  if (req.body) req.body = sanitizeValue(req.body);
+  if (req.params) req.params = sanitizeValue(req.params);
+  next();
+});
 app.set("trust proxy", 1);
 
 // CSP Header beállítása - engedékeny biztonsági politika
