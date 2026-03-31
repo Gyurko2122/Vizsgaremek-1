@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-
+import { authHeaders } from "../auth";
 // Helper function - fix image URLs (handle both relative and absolute)
 const fixImageUrl = (url) => {
   if (!url) return "/img/placeholder.png"; // Fallback
@@ -64,7 +64,7 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
       if (isFav) {
         await fetch("/api/favorites", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({ username: currentUser, productId }),
         });
         setFavorites((prev) => {
@@ -75,7 +75,7 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
       } else {
         await fetch("/api/favorites", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({ username: currentUser, productId }),
         });
         setFavorites((prev) => new Set(prev).add(productId));

@@ -11,6 +11,7 @@ import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
 import SearchResults from "./components/SearchResults";
 import AdminPanel from "./components/AdminPanel";
+import { setAuthToken, clearAuthToken } from "./auth";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -110,10 +111,16 @@ function App() {
     user,
     rememberMe = false,
     userIsAdmin = false,
+    token = null,
   ) => {
     setIsLoggedIn(true);
     setUsername(user);
     setIsAdmin(userIsAdmin);
+
+    // Store JWT token
+    if (token) {
+      setAuthToken(token, rememberMe);
+    }
 
     if (rememberMe) {
       localStorage.setItem("isLoggedIn", "true");
@@ -143,6 +150,7 @@ function App() {
     setShowFavorites(false);
     setShowSearch(false);
     setShowAdmin(false);
+    clearAuthToken();
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
     localStorage.removeItem("rememberMe");
@@ -161,9 +169,21 @@ function App() {
 
       if (path === "/profile" && isLoggedIn) {
         setShowProfile(true);
+        setProfileUsername(null);
         setShowProductDetail(false);
         setShowMessages(false);
         setShowAdmin(false);
+      } else if (path.startsWith("/profile/") && path !== "/profile/") {
+        const targetUser = decodeURIComponent(path.split("/profile/")[1]);
+        if (targetUser) {
+          setProfileUsername(targetUser);
+          setShowProfile(true);
+          setShowProductDetail(false);
+          setShowMessages(false);
+          setShowFavorites(false);
+          setShowSearch(false);
+          setShowAdmin(false);
+        }
       } else if (path === "/messages" && isLoggedIn) {
         setShowMessages(true);
         setShowProfile(false);
@@ -407,7 +427,7 @@ function App() {
     );
   }
 
-  if (showProfile && isLoggedIn) {
+  if (showProfile && (isLoggedIn || profileUsername)) {
     return (
       <div
         style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}

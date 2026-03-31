@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./ProductDetail.css";
+import { authHeaders, authHeadersMultipart } from "../auth";
 
 // Helper function - fix image URLs (handle both relative and absolute)
 const fixImageUrl = (url) => {
@@ -80,9 +81,7 @@ export default function ProductDetail({
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           fromUser: currentUser,
           toUser: product.createdBy,
@@ -172,6 +171,7 @@ export default function ProductDetail({
         editNewFiles.forEach((file) => imageFormData.append("files", file));
         const imageResponse = await fetch("/api/upload/product-images", {
           method: "POST",
+          headers: authHeadersMultipart(),
           body: imageFormData,
         });
         if (imageResponse.ok) {
@@ -181,7 +181,7 @@ export default function ProductDetail({
       }
       const response = await fetch(`/api/products/${product._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           username: currentUser,
           productName: editFormData.productName,

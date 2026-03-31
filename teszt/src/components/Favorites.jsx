@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-
+import { authHeaders } from "../auth";
 const fixImageUrl = (url) => {
   if (!url) return "/img/placeholder.png";
   if (url.startsWith("/")) return url;
@@ -33,7 +33,7 @@ export default function Favorites({ username, onProductClick, onClose }) {
     try {
       await fetch("/api/favorites", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ username, productId }),
       });
       setProducts((prev) => prev.filter((p) => p._id !== productId));

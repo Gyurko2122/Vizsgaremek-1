@@ -17,7 +17,12 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
 
       const data = await response.json();
       if (response.ok) {
-        onLoginSuccess(data.username, rememberMe, data.isAdmin || false);
+        onLoginSuccess(
+          data.username,
+          rememberMe,
+          data.isAdmin || false,
+          data.token || null,
+        );
       } else if (response.status === 403 && data.suspendedUntil) {
         alert(`${data.message}\nOk: ${data.reason}`);
       } else {

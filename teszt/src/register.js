@@ -1,10 +1,22 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { Users_model } = require("./database");
 const router = express.Router();
 const { sendEmail } = require("./emailsender");
 
 require("dotenv").config();
+
+const JWT_SECRET = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return require("crypto")
+      .createHash("sha256")
+      .update("piacter-default-jwt-secret-change-in-production")
+      .digest("hex");
+  }
+  return secret;
+})();
 
 router.post("/register", async (req, res) => {
   try {
@@ -56,9 +68,13 @@ router.post("/register", async (req, res) => {
       console.warn("Email küldési hiba (nem kritikus):", emailError);
     }
 
-    return res
-      .status(201)
-      .json({ message: "Sikeres regisztráció!", username: username });
+    return res.status(201).json({
+      message: "Sikeres regisztráció!",
+      username: username,
+      token: jwt.sign({ username: username, isAdmin: false }, JWT_SECRET, {
+        expiresIn: "7d",
+      }),
+    });
   } catch (error) {
     console.error("Hiba a felhasználó mentése során:", error);
     return res

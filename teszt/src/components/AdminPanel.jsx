@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-
+import { authHeaders } from "../auth";
 const fixImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("/")) return url;
@@ -21,10 +21,7 @@ export default function AdminPanel({ username, onClose }) {
   const [suspendDays, setSuspendDays] = useState(3);
   const [suspendReason, setSuspendReason] = useState("");
 
-  const adminHeaders = {
-    "Content-Type": "application/json",
-    "x-admin-username": username,
-  };
+  const adminHeaders = authHeaders();
 
   const fetchStats = async () => {
     try {

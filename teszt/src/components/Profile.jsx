@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-
+import { authHeaders, authHeadersMultipart } from "../auth";
 // Helper function - fix image URLs (handle both relative and absolute)
 const DEFAULT_AVATAR =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23334155' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%2394a3b8'%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E";
@@ -89,6 +89,7 @@ export default function Profile({
         `/api/upload/profile-picture?username=${username}`,
         {
           method: "POST",
+          headers: authHeadersMultipart(),
           body: formData,
         },
       );
@@ -118,9 +119,7 @@ export default function Profile({
     try {
       const response = await fetch(`/api/products/${productId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({ username }),
       });
 
@@ -154,7 +153,7 @@ export default function Profile({
     try {
       const response = await fetch(`/api/user/${username}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ confirmUsername: username }),
       });
 
@@ -444,6 +443,7 @@ function NewAdForm({ username, onAdCreated, onCancel }) {
 
       const imageResponse = await fetch("/api/upload/product-images", {
         method: "POST",
+        headers: authHeadersMultipart(),
         body: imageFormData,
       });
 
@@ -465,9 +465,7 @@ function NewAdForm({ username, onAdCreated, onCancel }) {
       // Then create the product with the image URLs
       const productResponse = await fetch("/api/products", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           username,
           productName: formData.productName,
@@ -704,6 +702,7 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
 
         const imageResponse = await fetch("/api/upload/product-images", {
           method: "POST",
+          headers: authHeadersMultipart(),
           body: imageFormData,
         });
 
@@ -715,9 +714,7 @@ function EditAdForm({ username, adId, ad, onAdUpdated, onCancel }) {
 
       const response = await fetch(`/api/products/${adId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           username,
           productName: formData.productName,
