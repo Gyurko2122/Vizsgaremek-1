@@ -77,9 +77,18 @@ const Users = new Schema({
   },
   password: { type: String, required: true, minlength: 8 },
   picture: { type: String, required: false, trim: true },
-  isAdmin: { type: Boolean, required: true },
+  isAdmin: { type: Boolean, required: true, default: false },
   suspendedUntil: { type: Date, default: null },
   suspensionReason: { type: String, default: null },
+});
+
+// Védelem: új felhasználó regisztrálása SOHA nem lehet admin
+// Csak adatbázisban kézzel vagy admin végponton keresztül állítható
+Users.pre("save", function (next) {
+  if (this.isNew) {
+    this.isAdmin = false;
+  }
+  next();
 });
 
 const Users_model = model("Users", Users);
