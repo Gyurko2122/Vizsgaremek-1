@@ -28,7 +28,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // --- Socket.io felhasználó-kezelés ---
 const onlineUsers = new Map(); // username -> socket.id
