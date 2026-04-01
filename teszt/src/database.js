@@ -11,13 +11,18 @@ const Name = process.env.DATABASE_NAME;
 // --- Üzenet titkosítás (AES-256-CBC) ---
 const ENCRYPTION_KEY = (() => {
   const key = process.env.MESSAGE_ENCRYPTION_KEY;
-  if (key && key.length === 64) return key;
+  if (key && key.trim().length >= 32) {
+    // Ha pontosan 64 hex karakter, használjuk közvetlenül
+    if (/^[0-9a-fA-F]{64}$/.test(key.trim())) return key.trim();
+    // Egyébként sha256 hash-eljük 64 hex karakterre
+    return crypto.createHash("sha256").update(key.trim()).digest("hex");
+  }
   console.warn(
-    "⚠️  MESSAGE_ENCRYPTION_KEY nincs beállítva. Állítsd be a .env fájlban (64 hex karakter)!",
+    "⚠️  MESSAGE_ENCRYPTION_KEY nincs beállítva vagy túl rövid. Állítsd be a .env fájlban!",
   );
   return crypto
     .createHash("sha256")
-    .update(key || "piacter-default-encryption-key-change-in-production")
+    .update("piacter-default-encryption-key-change-in-production")
     .digest("hex");
 })();
 const IV_LENGTH = 16;
