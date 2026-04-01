@@ -1048,6 +1048,47 @@ article,
   color: #fca5a5;
 }
 
+/* Mobile: kisebb product card */
+@media (max-width: 768px) {
+  .product-card-image {
+    height: 120px;
+  }
+
+  .product-card-info {
+    padding: 0.8rem;
+  }
+
+  .product-card-name {
+    font-size: 0.9rem;
+    margin: 0 0 0.3rem 0;
+  }
+
+  .product-card-description {
+    font-size: 0.78rem;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .product-card-location {
+    font-size: 0.78rem;
+  }
+
+  .product-card-price {
+    font-size: 1.05rem;
+  }
+
+  .product-card-seller {
+    font-size: 0.75rem;
+    padding-top: 0.3rem;
+    margin-top: 0.3rem;
+  }
+
+  .favorite-star {
+    font-size: 1.1rem;
+    width: 28px;
+    height: 28px;
+  }
+}
+
 /* ============================================
    SEARCH RESULTS PAGE
    ============================================ */
