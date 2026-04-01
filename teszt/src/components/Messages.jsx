@@ -322,7 +322,7 @@ export default function Messages({
   return (
     <div className="messages-page">
       <div className="messages-wrapper">
-        <div className="messages-main">
+        <div className={`messages-main ${view === "chat" ? "mobile-chat-view" : "mobile-inbox-view"}`}>
           {/* Close button */}
           <button
             className="messages-page-close-btn"
