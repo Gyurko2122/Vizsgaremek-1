@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { Users_model } = require("./database");
 const router = express.Router();
 require("dotenv").config();
@@ -8,19 +9,20 @@ require("dotenv").config();
 const JWT_SECRET = (() => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("❌ FATAL: JWT_SECRET nincs beállítva production környezetben!");
+      process.exit(1);
+    }
     console.warn(
-      "⚠️  JWT_SECRET nincs beállítva a .env fájlban! Állítsd be production környezetben!",
+      "⚠️  JWT_SECRET nincs beállítva! Véletlen kulcs generálva (csak fejlesztéshez).",
     );
-    return require("crypto")
-      .createHash("sha256")
-      .update("piacter-default-jwt-secret-change-in-production")
-      .digest("hex");
+    return crypto.randomBytes(64).toString("hex");
   }
   return secret;
 })();
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   // NoSQL injection védelem - csak string típust fogadunk el
   if (typeof email !== "string" || typeof password !== "string") {
@@ -52,15 +54,29 @@ router.post("/login", async (req, res) => {
       user.suspensionReason = null;
       await user.save();
     }
+    const tokenExpiry = rememberMe ? "7d" : "2h";
+    const token = jwt.sign(
+      { username: user.username, isAdmin: user.isAdmin || false },
+      JWT_SECRET,
+      { expiresIn: tokenExpiry },
+    );
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    };
+    if (rememberMe) {
+      cookieOptions.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 nap
+    }
+    // session cookie (no maxAge) ha nem rememberMe
+
+    res.cookie("token", token, cookieOptions);
     res.status(200).json({
       message: "Sikeres bejelentkezés!",
       username: user.username,
       isAdmin: user.isAdmin || false,
-      token: jwt.sign(
-        { username: user.username, isAdmin: user.isAdmin || false },
-        JWT_SECRET,
-        { expiresIn: "7d" },
-      ),
     });
   } else {
     res.status(401).json({ message: "Hibás e-mail cím vagy jelszó!" });

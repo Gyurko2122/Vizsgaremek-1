@@ -2606,6 +2606,17 @@ article,
     padding: 1.5rem;
   }
 
+  /* Row/column layout stacking on mobile */
+  .row {
+    flex-direction: column;
+  }
+
+  .col-9,
+  .col-3 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
   /* Ad details */
   .ad-details-card {
     flex-direction: column;

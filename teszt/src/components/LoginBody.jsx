@@ -12,7 +12,7 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await response.json();
@@ -21,7 +21,6 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
           data.username,
           rememberMe,
           data.isAdmin || false,
-          data.token || null,
         );
       } else if (response.status === 403 && data.suspendedUntil) {
         alert(`${data.message}\nOk: ${data.reason}`);

@@ -5,6 +5,7 @@ const multer = require("multer");
 const http = require("http");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const login = require("./login");
 const { JWT_SECRET } = require("./login");
@@ -133,6 +134,7 @@ console.log("Server.js - Starting initialization...");
 // --- Middleware Beállítások ---
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // NoSQL injection védelem - saját sanitize middleware (Express 5 kompatibilis)
 function sanitizeValue(val) {
@@ -159,7 +161,7 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:3000 ws://localhost:3000 https://vizsga-ic7v.onrender.com wss://vizsga-ic7v.onrender.com; font-src 'self' data:",
+    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:3000 ws://localhost:3000 https://vizsga-ic7v.onrender.com wss://vizsga-ic7v.onrender.com; font-src 'self' data:",
   );
   next();
 });
@@ -168,15 +170,20 @@ app.use((req, res, next) => {
 app.use("/api", register);
 app.use("/api", login);
 
-// --- JWT Auth Middleware ---
+// --- JWT Auth Middleware (cookie-ból VAGY header-ből olvassa a tokent) ---
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  let token = req.cookies && req.cookies.token;
+  if (!token) {
+    const authHeader = req.headers["authorization"];
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    }
+  }
+  if (!token) {
     return res
       .status(401)
       .json({ error: "Nincs bejelentkezve (hiányzó token)" });
   }
-  const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // { username, isAdmin }
@@ -212,13 +219,29 @@ app.get("/api/verify-token", authMiddleware, async (req, res) => {
   }
 });
 
-// --- isAdmin Middleware (JWT alapú) ---
+// --- Logout endpoint (cookie törlés) ---
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+  res.json({ message: "Sikeres kijelentkezés" });
+});
+
+// --- isAdmin Middleware (JWT alapú, cookie-ból VAGY header-ből) ---
 const isAdminMiddleware = async (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  let token = req.cookies && req.cookies.token;
+  if (!token) {
+    const authHeader = req.headers["authorization"];
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    }
+  }
+  if (!token) {
     return res.status(401).json({ error: "Nincs bejelentkezve" });
   }
-  const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await Users_model.findOne({ username: decoded.username });

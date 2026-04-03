@@ -11,7 +11,7 @@ import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
 import SearchResults from "./components/SearchResults";
 import AdminPanel from "./components/AdminPanel";
-import { getAuthToken, setAuthToken, clearAuthToken } from "./auth";
+import { setAuthToken, clearAuthToken } from "./auth";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -53,22 +53,8 @@ function App() {
       }
     }
 
-    // JWT token ellenőrzése a szerverrel
-    const token = getAuthToken();
-    if (!token) {
-      // Nincs token — nem vagyunk bejelentkezve, töröljük a helyi adatokat
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("username");
-      localStorage.removeItem("isAdmin");
-      sessionStorage.removeItem("isLoggedIn");
-      sessionStorage.removeItem("username");
-      sessionStorage.removeItem("isAdmin");
-      return;
-    }
-
-    fetch("/api/verify-token", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // JWT token ellenőrzése a szerverrel (cookie-ból olvassa automatikusan)
+    fetch("/api/verify-token")
       .then((res) => {
         if (!res.ok) throw new Error("Invalid token");
         return res.json();
@@ -137,16 +123,10 @@ function App() {
     user,
     rememberMe = false,
     userIsAdmin = false,
-    token = null,
   ) => {
     setIsLoggedIn(true);
     setUsername(user);
     setIsAdmin(userIsAdmin);
-
-    // Store JWT token
-    if (token) {
-      setAuthToken(token, rememberMe);
-    }
 
     if (rememberMe) {
       localStorage.setItem("isLoggedIn", "true");
@@ -165,6 +145,8 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Szerver oldali cookie törlés
+    fetch("/api/logout", { method: "POST" }).catch(() => {});
     setIsLoggedIn(false);
     setUsername("");
     setIsAdmin(false);

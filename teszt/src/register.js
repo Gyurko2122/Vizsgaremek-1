@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { Users_model } = require("./database");
 const router = express.Router();
 const { sendEmail } = require("./emailsender");
@@ -10,10 +10,14 @@ require("dotenv").config();
 const JWT_SECRET = (() => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    return require("crypto")
-      .createHash("sha256")
-      .update("piacter-default-jwt-secret-change-in-production")
-      .digest("hex");
+    if (process.env.NODE_ENV === "production") {
+      console.error("❌ FATAL: JWT_SECRET nincs beállítva production környezetben!");
+      process.exit(1);
+    }
+    console.warn(
+      "⚠️  JWT_SECRET nincs beállítva! Véletlen kulcs generálva (csak fejlesztéshez).",
+    );
+    return crypto.randomBytes(64).toString("hex");
   }
   return secret;
 })();
@@ -87,9 +91,6 @@ router.post("/register", async (req, res) => {
     return res.status(201).json({
       message: "Sikeres regisztráció!",
       username: username,
-      token: jwt.sign({ username: username, isAdmin: false }, JWT_SECRET, {
-        expiresIn: "7d",
-      }),
     });
   } catch (error) {
     console.error("Hiba a felhasználó mentése során:", error);
