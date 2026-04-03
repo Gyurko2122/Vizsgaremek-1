@@ -503,9 +503,24 @@ nav#user-nav,
    ============================================ */
 
 .container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 2rem;
+}
+
+.row {
+  display: flex;
+  gap: 2rem;
+}
+
+.col-9 {
+  flex: 0 0 75%;
+  max-width: 75%;
+}
+
+.col-3 {
+  flex: 0 0 calc(25% - 2rem);
+  max-width: calc(25% - 2rem);
 }
 
 a {
@@ -1379,6 +1394,12 @@ article,
 @media (min-width: 1024px) {
   .ads-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .ads-grid {
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
