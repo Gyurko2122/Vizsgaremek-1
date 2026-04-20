@@ -83,11 +83,10 @@ const Users = new Schema({
 
 // Védelem: új felhasználó regisztrálása SOHA nem lehet admin
 // Csak adatbázisban kézzel vagy admin végponton keresztül állítható
-Users.pre("save", function (next) {
+Users.pre("save", async function () {
   if (this.isNew) {
     this.isAdmin = false;
   }
-  next();
 });
 
 const Users_model = model("Users", Users);
