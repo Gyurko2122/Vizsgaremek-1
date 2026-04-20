@@ -8,8 +8,16 @@ describe("App Component Integration", () => {
   beforeEach(() => {
     resetFetchMocks();
     vi.clearAllMocks();
-    localStorage.clear();
-    sessionStorage.clear();
+    try {
+      localStorage.clear();
+    } catch (e) {
+      // localStorage might not be available or clear might not be callable
+    }
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      // sessionStorage might not be available or clear might not be callable
+    }
   });
 
   it("renders main navbar and body on initial load", async () => {
@@ -116,11 +124,9 @@ describe("App Component Integration", () => {
 
     render(<App />);
 
-    // Render should complete
-    expect(
-      screen.getByPlaceholderText(/Keresh termékekre/i) ||
-        screen.getByPlaceholderText(/Keress termékekre/i),
-    ).toBeInTheDocument();
+    // Render should complete - check for search input
+    const searchInput = screen.queryByPlaceholderText(/Keress termékekre/i);
+    expect(searchInput).toBeInTheDocument();
   });
 
   it("renders footer", () => {

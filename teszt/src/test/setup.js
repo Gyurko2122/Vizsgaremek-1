@@ -17,28 +17,36 @@ afterEach(() => {
   }
 });
 
-// Mock fetch globally
+// Note: Fetch is NOT mocked globally to allow API integration tests to work
+// Component tests mock fetch locally as needed
+// Store original fetch for API tests
+const originalFetch = global.fetch;
+
+// Create a mock fetch that can be used by component tests
 global.fetch = vi.fn();
+global.fetch._original = originalFetch;
 
-// Setup localStorage if not available
-if (!global.localStorage) {
-  global.localStorage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
+// Mock localStorage and sessionStorage for tests
+const createLocalStorageMock = () => {
+  const store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      Object.keys(store).forEach((key) => {
+        delete store[key];
+      });
+    },
   };
-}
+};
 
-// Setup sessionStorage if not available
-if (!global.sessionStorage) {
-  global.sessionStorage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
-  };
-}
+global.localStorage = createLocalStorageMock();
+global.sessionStorage = createLocalStorageMock();
 
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {

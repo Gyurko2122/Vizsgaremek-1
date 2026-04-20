@@ -19,7 +19,9 @@ describe("RegisterBody Component", () => {
 
     render(<RegisterBody onLoginClick={mockOnLoginClick} />);
 
-    expect(screen.getByText("Regisztráció")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /regisztráció/i }),
+    ).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Felhasználónév")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Email cím")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Jelszó")).toBeInTheDocument();
