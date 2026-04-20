@@ -8,7 +8,6 @@ require("dotenv").config();
 const URI = process.env.MONGODB_URI;
 const Name = process.env.DATABASE_NAME;
 
-// --- Üzenet titkosítás (AES-256-CBC) ---
 const ENCRYPTION_KEY = (() => {
   const key = process.env.MESSAGE_ENCRYPTION_KEY;
   if (key && key.length === 64) return key;
