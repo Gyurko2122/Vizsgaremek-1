@@ -514,6 +514,54 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+        <div>
+          {showLogin && (
+            <div className="modal-overlay" onClick={() => setShowLogin(false)}>
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setShowLogin(false)}
+                >
+                  ×
+                </button>
+                <LoginBody
+                  onRegisterClick={() => {
+                    setShowLogin(false);
+                    setShowRegister(true);
+                  }}
+                  onLoginSuccess={handleLoginSuccess}
+                />
+              </div>
+            </div>
+          )}
+          {showRegister && (
+            <div
+              className="modal-overlay"
+              onClick={() => setShowRegister(false)}
+            >
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setShowRegister(false)}
+                >
+                  ×
+                </button>
+                <RegisterBody
+                  onLoginClick={() => {
+                    setShowRegister(false);
+                    setShowLogin(true);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         <div style={{ flex: 1 }}>
           <ProductDetail
             productId={selectedProductId}
