@@ -18,7 +18,11 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:component": "vitest run src/test/LoginBody.test.jsx src/test/RegisterBody.test.jsx src/test/App.test.jsx",
-    "test:api": "vitest run src/test/api.test.js"
+    "test:api": "vitest run src/test/api.test.js",
+    "test:complete": "vitest run src/test/complete-integration.test.js",
+    "test:generate-report": "node src/test/generate-report.js",
+    "test:full": "npm run test:api && npm run test:complete && npm run test:generate-report",
+    "test:demo": "node src/test/run-complete-tests.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
