@@ -20,7 +20,8 @@ export default function SearchResults({
   const [searched, setSearched] = useState(false);
 
   const performSearch = async (q) => {
-    if (!q || q.trim().length < 1) return;
+    // Minimum 2 characters required for search
+    if (!q || q.trim().length < 2) return;
     setLoading(true);
     setSearched(true);
     try {
@@ -39,7 +40,7 @@ export default function SearchResults({
   };
 
   useEffect(() => {
-    if (query && query.trim().length >= 1) {
+    if (query && query.trim().length >= 2) {
       performSearch(query);
     }
   }, [query]);

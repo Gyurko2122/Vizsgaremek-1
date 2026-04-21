@@ -351,9 +351,13 @@ export default function ProductDetail({
               {!isLoggedIn ? (
                 <button
                   className="send-message-button"
-                  onClick={() => onLoginClick && onLoginClick()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Do nothing - user is not logged in
+                  }}
+                  disabled
                 >
-                  🔒 Jelentkezz be az üzenetküldéshez
+                  🔒 Bejelentkezésre van szükség az üzenetküldéshez
                 </button>
               ) : (
                 <button

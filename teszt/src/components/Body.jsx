@@ -110,10 +110,12 @@ export default function Body({ onProductClick, isLoggedIn, currentUser }) {
                     <div
                       key={product._id}
                       className="product-card"
-                      onClick={() =>
-                        onProductClick(product.publicId || product._id)
-                      }
-                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (isLoggedIn) {
+                          onProductClick(product.publicId || product._id);
+                        }
+                      }}
+                      style={{ cursor: isLoggedIn ? "pointer" : "default" }}
                     >
                       <div className="product-card-image">
                         {isLoggedIn && (
