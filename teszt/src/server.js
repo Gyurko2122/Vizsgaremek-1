@@ -20,6 +20,12 @@ const {
   decryptMessage,
 } = require("./database");
 const { sendEmail, sendMessageNotification } = require("./emailsender");
+const {
+  sanitizeMiddleware,
+  csrfHeaderMiddleware,
+  authMiddleware,
+  isAdminMiddleware,
+} = require("./middleware");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -135,63 +141,13 @@ console.log("Server.js - Starting initialization...");
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
-
-// NoSQL injection védelem - saját sanitize middleware (Express 5 kompatibilis)
-function sanitizeValue(val) {
-  if (typeof val === "string") return val;
-  if (Array.isArray(val)) return val.map(sanitizeValue);
-  if (val && typeof val === "object") {
-    const clean = {};
-    for (const key of Object.keys(val)) {
-      if (key.startsWith("$") || key.includes(".")) continue;
-      clean[key] = sanitizeValue(val[key]);
-    }
-    return clean;
-  }
-  return val;
-}
-app.use((req, res, next) => {
-  if (req.body) req.body = sanitizeValue(req.body);
-  if (req.params) req.params = sanitizeValue(req.params);
-  next();
-});
+app.use(sanitizeMiddleware);
 app.set("trust proxy", 1);
-
-// CSP Header beállítása - engedékeny biztonsági politika
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self' https://vizsga-ic7v.onrender.com; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:3000 ws://localhost:3000 https://vizsga-ic7v.onrender.com wss://vizsga-ic7v.onrender.com; font-src 'self' data:",
-  );
-  next();
-});
+app.use(csrfHeaderMiddleware);
 
 // API route-ok felcsatolása
 app.use("/api", register);
 app.use("/api", login);
-
-// --- JWT Auth Middleware (cookie-ból VAGY header-ből olvassa a tokent) ---
-const authMiddleware = (req, res, next) => {
-  let token = req.cookies && req.cookies.token;
-  if (!token) {
-    const authHeader = req.headers["authorization"];
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    }
-  }
-  if (!token) {
-    return res
-      .status(401)
-      .json({ error: "Nincs bejelentkezve (hiányzó token)" });
-  }
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { username, isAdmin }
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Érvénytelen vagy lejárt token" });
-  }
-};
 
 // --- Token ellenőrzés endpoint (frontend session restore) ---
 app.get("/api/verify-token", authMiddleware, async (req, res) => {
@@ -229,40 +185,6 @@ app.post("/api/logout", (req, res) => {
   });
   res.json({ message: "Sikeres kijelentkezés" });
 });
-
-// --- isAdmin Middleware (JWT alapú, cookie-ból VAGY header-ből) ---
-const isAdminMiddleware = async (req, res, next) => {
-  let token = req.cookies && req.cookies.token;
-  if (!token) {
-    const authHeader = req.headers["authorization"];
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    }
-  }
-  if (!token) {
-    return res.status(401).json({ error: "Nincs bejelentkezve" });
-  }
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await Users_model.findOne({ username: decoded.username });
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: "Nincs admin jogosultság" });
-    }
-    req.adminUser = user;
-    next();
-  } catch (err) {
-    return res.status(500).json({ error: "Szerver hiba" });
-  }
-};
-
-// Helper: publicId generálása régi rekordokhoz
-async function ensurePublicId(doc, Model) {
-  if (!doc.publicId) {
-    doc.publicId = crypto.randomBytes(16).toString("hex");
-    await Model.findByIdAndUpdate(doc._id, { publicId: doc.publicId });
-  }
-  return doc;
-}
 
 // --- Multer beállítás (memoryStorage - MongoDB-be mentjük) ---
 const imageFilter = (req, file, cb) => {
