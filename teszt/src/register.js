@@ -47,6 +47,18 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    if (username.length < 3) {
+      return res.status(400).json({
+        message: "A felhasználónév legalább 3 karakter hosszú legyen!",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: "A jelszó legalább 6 karakter hosszú legyen!",
+      });
+    }
+
     // Ellenőrizze, hogy az email vagy username már létezik-e
     const existingUser = await Users_model.findOne({
       $or: [{ email }, { username }],

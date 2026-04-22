@@ -2,17 +2,24 @@ import { useState } from "react";
 
 export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
+    if (!email || !password) {
+      alert("Kérjük, töltsd ki az összes mezőt!");
+      return;
+    }
+
     try {
+      setIsLoading(true);
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await response.json();
@@ -21,7 +28,6 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
           data.username,
           rememberMe,
           data.isAdmin || false,
-          data.token || null,
         );
       } else if (response.status === 403 && data.suspendedUntil) {
         alert(`${data.message}\nOk: ${data.reason}`);
@@ -31,6 +37,8 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
     } catch (error) {
       console.error("Login error:", error);
       alert("Hiba a bejelentkezés során!");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,8 +68,8 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
               <span>Bejelentkezve maradok</span>
             </label>
           </div>
-          <button type="submit" className="btn-submit">
-            Belépés
+          <button type="submit" className="btn-submit" disabled={isLoading}>
+            {isLoading ? "Betöltés..." : "Belépés"}
           </button>
           <div className="form-links">
             <a

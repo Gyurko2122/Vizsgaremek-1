@@ -143,6 +143,12 @@ router.post("/products", authMiddleware, async (req, res) => {
       });
     }
 
+    if (productName.length < 3) {
+      return res.status(400).json({
+        error: "A terméknév legalább 3 karakter hosszú legyen!",
+      });
+    }
+
     // Prepare images array (prefer images array if provided)
     const allImages =
       images && images.length > 0 ? images : imageUrl ? [imageUrl] : [];
@@ -200,6 +206,12 @@ router.put("/products/:id", authMiddleware, async (req, res) => {
     // Validate required fields
     if (!productName || !description || !location || price === undefined) {
       return res.status(400).json({ error: "Hiányzó mezők" });
+    }
+
+    if (productName.length < 3) {
+      return res.status(400).json({
+        error: "A terméknév legalább 3 karakter hosszú legyen!",
+      });
     }
 
     // Prepare update data
