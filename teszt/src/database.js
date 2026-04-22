@@ -8,21 +8,15 @@ require("dotenv").config();
 const URI = process.env.MONGODB_URI;
 const Name = process.env.DATABASE_NAME;
 
-// --- Üzenet titkosítás (AES-256-CBC) ---
 const ENCRYPTION_KEY = (() => {
   const key = process.env.MESSAGE_ENCRYPTION_KEY;
-  if (key && key.trim().length >= 32) {
-    // Ha pontosan 64 hex karakter, használjuk közvetlenül
-    if (/^[0-9a-fA-F]{64}$/.test(key.trim())) return key.trim();
-    // Egyébként sha256 hash-eljük 64 hex karakterre
-    return crypto.createHash("sha256").update(key.trim()).digest("hex");
-  }
+  if (key && key.length === 64) return key;
   console.warn(
-    "⚠️  MESSAGE_ENCRYPTION_KEY nincs beállítva vagy túl rövid. Állítsd be a .env fájlban!",
+    "⚠️  MESSAGE_ENCRYPTION_KEY nincs beállítva. Állítsd be a .env fájlban (64 hex karakter)!",
   );
   return crypto
     .createHash("sha256")
-    .update("piacter-default-encryption-key-change-in-production")
+    .update(key || "piacter-default-encryption-key-change-in-production")
     .digest("hex");
 })();
 const IV_LENGTH = 16;
@@ -89,7 +83,7 @@ const Users = new Schema({
 
 // Védelem: új felhasználó regisztrálása SOHA nem lehet admin
 // Csak adatbázisban kézzel vagy admin végponton keresztül állítható
-Users.pre("save", function () {
+Users.pre("save", async function () {
   if (this.isNew) {
     this.isAdmin = false;
   }

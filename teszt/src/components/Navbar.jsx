@@ -87,7 +87,7 @@ export default function Navbar({
                 className="user-menu-btn"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
-                Üdvözlünk, {username}! ▼
+                Üdvözlünk, {username}!
               </button>
               {dropdownOpen && (
                 <div className="user-dropdown">
@@ -111,14 +111,14 @@ export default function Navbar({
                     className="dropdown-item"
                     onClick={handleFavoritesClick}
                   >
-                    ★ Kedvencek
+                    Kedvencek
                   </button>
                   {isAdmin && (
                     <button
                       className="dropdown-item admin-item"
                       onClick={handleAdminClick}
                     >
-                      ⚙ Admin Panel
+                      Admin Panel
                     </button>
                   )}
                   <button

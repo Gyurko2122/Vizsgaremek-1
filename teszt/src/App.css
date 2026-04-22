@@ -503,24 +503,9 @@ nav#user-nav,
    ============================================ */
 
 .container {
-  max-width: 1600px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem;
-}
-
-.row {
-  display: flex;
-  gap: 2rem;
-}
-
-.col-9 {
-  flex: 0 0 75%;
-  max-width: 75%;
-}
-
-.col-3 {
-  flex: 0 0 calc(25% - 2rem);
-  max-width: calc(25% - 2rem);
 }
 
 a {
@@ -935,17 +920,18 @@ article,
 .product-card {
   background: #1a2332;
   border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid #334155;
   overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .product-card:hover {
-  border-color: #475569;
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 .product-card-image {
@@ -1060,47 +1046,6 @@ article,
 
 .error-text {
   color: #fca5a5;
-}
-
-/* Mobile: kisebb product card */
-@media (max-width: 768px) {
-  .product-card-image {
-    height: 120px;
-  }
-
-  .product-card-info {
-    padding: 0.8rem;
-  }
-
-  .product-card-name {
-    font-size: 0.9rem;
-    margin: 0 0 0.3rem 0;
-  }
-
-  .product-card-description {
-    font-size: 0.78rem;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .product-card-location {
-    font-size: 0.78rem;
-  }
-
-  .product-card-price {
-    font-size: 1.05rem;
-  }
-
-  .product-card-seller {
-    font-size: 0.75rem;
-    padding-top: 0.3rem;
-    margin-top: 0.3rem;
-  }
-
-  .favorite-star {
-    font-size: 1.1rem;
-    width: 28px;
-    height: 28px;
-  }
 }
 
 /* ============================================
@@ -1393,12 +1338,6 @@ article,
 @media (min-width: 1024px) {
   .ads-grid {
     grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (min-width: 1400px) {
-  .ads-grid {
-    grid-template-columns: repeat(5, 1fr);
   }
 }
 
@@ -2476,36 +2415,11 @@ article,
 @media (max-width: 768px) {
   header .container {
     grid-template-columns: auto 1fr;
-    gap: 0.8rem;
-    padding: 0 1rem;
   }
 
   .search-container {
     grid-column: 1 / -1;
     order: 3;
-    max-width: 100%;
-  }
-
-  .left-nav {
-    gap: 1.5rem;
-  }
-
-  .news-link {
-    display: none;
-  }
-
-  .header-controls {
-    gap: 0.8rem;
-  }
-
-  .user-menu-btn {
-    font-size: 0.85rem;
-    padding: 0.5rem 0.8rem;
-  }
-
-  .user-dropdown {
-    right: -0.5rem;
-    min-width: 160px;
   }
 
   .result-card {
@@ -2514,7 +2428,7 @@ article,
 
   .result-card-img {
     width: 100%;
-    height: 200px;
+    height: 250px;
   }
 
   .chat-container {
@@ -2540,106 +2454,11 @@ article,
   h2 {
     font-size: 1.5rem;
   }
-
-  /* Profile responsive */
-  .profile-page {
-    padding: 1rem;
-  }
-
-  .profile-card {
-    padding: 1.5rem;
-  }
-
-  .profile-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1.2rem;
-  }
-
-  #profile-image {
-    width: 100px;
-    height: 100px;
-  }
-
-  #profile-username {
-    font-size: 1.8rem;
-  }
-
-  .profile-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .profile-page .ads-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-
-  /* Favorites responsive */
-  .favorites-page {
-    padding: 1rem;
-  }
-
-  .favorites-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-
-  /* Search results responsive */
-  .search-results-page {
-    padding: 1rem;
-  }
-
-  .search-results-container {
-    padding: 1.2rem;
-  }
-
-  .search-results-title {
-    font-size: 1.3rem;
-  }
-
-  /* News section */
-  .news-section {
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
-    padding: 1.5rem;
-  }
-
-  /* Row/column layout stacking on mobile */
-  .row {
-    flex-direction: column;
-  }
-
-  .col-9,
-  .col-3 {
-    flex: 0 0 100%;
-    max-width: 100%;
-  }
-
-  /* Ad details */
-  .ad-details-card {
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 1.5rem;
-  }
-
-  .ad-details-image,
-  .ad-details-info {
-    flex: none;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .container {
-    padding: 0 1rem;
-  }
 }
 
 @media (max-width: 480px) {
   header .container {
-    gap: 0.6rem;
-    padding: 0 0.8rem;
+    gap: 1rem;
   }
 
   .logo {
@@ -2651,56 +2470,14 @@ article,
   }
 
   .header-controls {
-    gap: 0.6rem;
-  }
-
-  .user-menu-btn {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.6rem;
+    gap: 1rem;
   }
 
   .ads-grid {
     grid-template-columns: 1fr;
   }
 
-  .favorites-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-page .ads-grid {
-    grid-template-columns: 1fr;
-  }
-
   .form-container {
     padding: 1.5rem;
-  }
-
-  #profile-username {
-    font-size: 1.5rem;
-  }
-
-  .profile-card {
-    padding: 1rem;
-  }
-
-  h1 {
-    font-size: 1.6rem;
-  }
-
-  h2 {
-    font-size: 1.3rem;
-  }
-
-  .search-results-filters {
-    gap: 0.4rem;
-  }
-
-  .search-filter-btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-
-  .result-card-img {
-    height: 180px;
   }
 }

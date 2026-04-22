@@ -13,12 +13,20 @@
     "start": "node src/server.js",
     "update-urls": "node src/update-image-urls.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:component": "vitest run src/test/LoginBody.test.jsx src/test/RegisterBody.test.jsx src/test/App.test.jsx",
+    "test:api": "vitest run src/test/api.test.js",
+    "test:complete": "vitest run src/test/complete-integration.test.js",
+    "test:generate-report": "node src/test/generate-report.js",
+    "test:full": "npm run test:api && npm run test:complete && npm run test:generate-report",
+    "test:demo": "node src/test/run-complete-tests.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.3",
-    "cookie-parser": "^1.4.7",
     "cores": "^0.8.5",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -44,8 +52,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.2.0",
-    "@vitest/ui": "^4.1.5",
+    "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
@@ -53,8 +60,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^29.0.2",
+    "pptxgenjs": "^4.0.1",
+    "qrcode": "^1.5.4",
     "vite": "^7.3.1",
-    "vitest": "^4.1.5",
-    "vitest-canvas-mock": "^1.1.4"
+    "vitest": "^4.1.4"
   }
 }

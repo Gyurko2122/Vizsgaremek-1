@@ -319,7 +319,7 @@ export default function ProductDetail({
           </div>
 
           <div className="product-location">
-            <span className="location-label">📍 Helyszín:</span>
+            <span className="location-label">Helyszín:</span>
             <span className="location-value">{product.location}</span>
           </div>
 
@@ -351,13 +351,9 @@ export default function ProductDetail({
               {!isLoggedIn ? (
                 <button
                   className="send-message-button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Do nothing - user is not logged in
-                  }}
-                  disabled
+                  onClick={() => onLoginClick && onLoginClick()}
                 >
-                  🔒 Bejelentkezésre van szükség az üzenetküldéshez
+                  Jelentkezz be az üzenetküldéshez
                 </button>
               ) : (
                 <button
@@ -372,7 +368,7 @@ export default function ProductDetail({
                     }
                   }}
                 >
-                  💬 Üzenet az eladónak
+                  Üzenet az eladónak
                 </button>
               )}
             </div>
@@ -380,7 +376,7 @@ export default function ProductDetail({
 
           {currentUser === product.createdBy && (
             <button className="edit-product-button" onClick={openEditForm}>
-              ✏️ Hirdetés szerkesztése
+              Hirdetés szerkesztése
             </button>
           )}
         </div>

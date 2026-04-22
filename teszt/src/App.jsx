@@ -11,7 +11,7 @@ import Messages from "./components/Messages";
 import Favorites from "./components/Favorites";
 import SearchResults from "./components/SearchResults";
 import AdminPanel from "./components/AdminPanel";
-import { setAuthToken, clearAuthToken } from "./auth";
+import { getAuthToken, setAuthToken, clearAuthToken } from "./auth";
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -53,8 +53,22 @@ function App() {
       }
     }
 
-    // JWT token ellenőrzése a szerverrel (cookie-ból olvassa automatikusan)
-    fetch("/api/verify-token")
+    // JWT token ellenőrzése a szerverrel
+    const token = getAuthToken();
+    if (!token) {
+      // Nincs token — nem vagyunk bejelentkezve, töröljük a helyi adatokat
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("username");
+      localStorage.removeItem("isAdmin");
+      sessionStorage.removeItem("isLoggedIn");
+      sessionStorage.removeItem("username");
+      sessionStorage.removeItem("isAdmin");
+      return;
+    }
+
+    fetch("/api/verify-token", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Invalid token");
         return res.json();
@@ -123,10 +137,16 @@ function App() {
     user,
     rememberMe = false,
     userIsAdmin = false,
+    token = null,
   ) => {
     setIsLoggedIn(true);
     setUsername(user);
     setIsAdmin(userIsAdmin);
+
+    // Store JWT token
+    if (token) {
+      setAuthToken(token, rememberMe);
+    }
 
     if (rememberMe) {
       localStorage.setItem("isLoggedIn", "true");
@@ -145,8 +165,6 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Szerver oldali cookie törlés
-    fetch("/api/logout", { method: "POST" }).catch(() => {});
     setIsLoggedIn(false);
     setUsername("");
     setIsAdmin(false);
@@ -496,6 +514,54 @@ function App() {
           onSearchSubmit={navigateToSearch}
           onAdminClick={navigateToAdmin}
         />
+        <div>
+          {showLogin && (
+            <div className="modal-overlay" onClick={() => setShowLogin(false)}>
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setShowLogin(false)}
+                >
+                  ×
+                </button>
+                <LoginBody
+                  onRegisterClick={() => {
+                    setShowLogin(false);
+                    setShowRegister(true);
+                  }}
+                  onLoginSuccess={handleLoginSuccess}
+                />
+              </div>
+            </div>
+          )}
+          {showRegister && (
+            <div
+              className="modal-overlay"
+              onClick={() => setShowRegister(false)}
+            >
+              <div
+                className="modal-window"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="modal-close"
+                  onClick={() => setShowRegister(false)}
+                >
+                  ×
+                </button>
+                <RegisterBody
+                  onLoginClick={() => {
+                    setShowRegister(false);
+                    setShowLogin(true);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         <div style={{ flex: 1 }}>
           <ProductDetail
             productId={selectedProductId}
