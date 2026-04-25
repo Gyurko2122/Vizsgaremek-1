@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { authHeaders, authHeadersMultipart } from "../auth";
-import "./Profile.css";
 // Helper function - fix image URLs (handle both relative and absolute)
 const DEFAULT_AVATAR =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23334155' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%2394a3b8'%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E";
