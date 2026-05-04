@@ -8,9 +8,10 @@ export default function RegisterBody({ onLoginClick }) {
     const username = document.getElementById('username').value;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('passwordConfirm').value;
 
     // Validáció
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !passwordConfirm) {
       alert('Kérjük, töltsd ki az összes mezőt!');
       return;
     }
@@ -22,6 +23,11 @@ export default function RegisterBody({ onLoginClick }) {
 
     if (password.length < 6) {
       alert('A jelszó legalább 6 karakter hosszú legyen!');
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      alert('A jelszavak nem egyeznek!');
       return;
     }
 
@@ -56,6 +62,7 @@ export default function RegisterBody({ onLoginClick }) {
             <div className="form-group"><input type="text" id="username" placeholder="Felhasználónév" minLength="3" required /></div>
             <div className="form-group"><input type="email" id="email" placeholder="Email cím" required /></div>
             <div className="form-group"><input type="password" id="password" placeholder="Jelszó" minLength="6" required /></div>
+            <div className="form-group"><input type="password" id="passwordConfirm" placeholder="Jelszó megerősítése" minLength="6" required /></div>
             <button type="submit" className="btn-submit" disabled={isLoading}>{isLoading ? 'Betöltés...' : 'Regisztráció'}</button>
             <div className="form-links"><a href="#" onClick={(e) => { e.preventDefault(); onLoginClick(); }}>Van már fiókod? Jelentkezz be!</a></div>
             </form>
