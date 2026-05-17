@@ -34,14 +34,36 @@ function App() {
   // localStorage/sessionStorage-ből töltjük be a bejelentkezési adatokat
   // JWT token szerver-oldali ellenőrzéssel
   useEffect(() => {
+    console.log("🔄 Init effect started");
     const rememberMe = localStorage.getItem("rememberMe") === "true";
+    console.log("📝 rememberMe:", rememberMe);
+    console.log("📦 sessionStorage content:", {
+      isLoggedIn: sessionStorage.getItem("isLoggedIn"),
+      username: sessionStorage.getItem("username"),
+      loginTime: sessionStorage.getItem("loginTime"),
+      authToken: sessionStorage.getItem("authToken") ? "EXISTS" : "MISSING",
+    });
+    console.log("📦 localStorage content:", {
+      isLoggedIn: localStorage.getItem("isLoggedIn"),
+      rememberMe: localStorage.getItem("rememberMe"),
+      authToken: localStorage.getItem("authToken") ? "EXISTS" : "MISSING",
+    });
 
     // Ha nem "remember me", ellenőrizzük a 20 perces lejáratot
     if (!rememberMe) {
       const loginTime = parseInt(sessionStorage.getItem("loginTime"), 10);
       const now = Date.now();
       const twentyMinutes = 20 * 60 * 1000;
+      console.log(
+        "⏱️ Session check - loginTime:",
+        loginTime,
+        "now:",
+        now,
+        "diff:",
+        now - loginTime,
+      );
       if (!loginTime || now - loginTime > twentyMinutes) {
+        console.log("⏱️ Session expired, clearing");
         // Lejárt a munkamenet — töröljük a helyi adatokat
         sessionStorage.removeItem("isLoggedIn");
         sessionStorage.removeItem("username");
@@ -55,7 +77,12 @@ function App() {
 
     // JWT token ellenőrzése a szerverrel
     const token = getAuthToken();
+    console.log(
+      "🔑 Retrieved token:",
+      token ? token.substring(0, 20) + "..." : "NONE",
+    );
     if (!token) {
+      console.log("❌ No token found, logging out");
       // Nincs token — nem vagyunk bejelentkezve, töröljük a helyi adatokat
       localStorage.removeItem("isLoggedIn");
       localStorage.removeItem("username");

@@ -16,14 +16,24 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
 
     try {
       setIsLoading(true);
+      console.log("📤 Sending login request...");
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
+      console.log("📥 Login response:", response.status, response.ok);
       const data = await response.json();
+      console.log("📋 Response data:", {
+        message: data.message,
+        username: data.username,
+        isAdmin: data.isAdmin,
+        hasToken: !!data.token,
+      });
+
       if (response.ok) {
+        console.log("✅ Login successful, calling onLoginSuccess");
         onLoginSuccess(
           data.username,
           rememberMe,
@@ -33,10 +43,11 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
       } else if (response.status === 403 && data.suspendedUntil) {
         alert(`${data.message}\nOk: ${data.reason}`);
       } else {
+        console.error("❌ Login failed:", data.message);
         alert(data.message || "Bejelentkezés sikertelen!");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("❌ Login error:", error);
       alert("Hiba a bejelentkezés során!");
     } finally {
       setIsLoading(false);
