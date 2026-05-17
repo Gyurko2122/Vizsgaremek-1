@@ -147,6 +147,13 @@ function App() {
     userIsAdmin = false,
     token = null,
   ) => {
+    console.log("🔐 handleLoginSuccess called with:", {
+      user,
+      rememberMe,
+      userIsAdmin,
+      token: token ? token.substring(0, 20) + "..." : "NO TOKEN",
+    });
+
     setIsLoggedIn(true);
     setUsername(user);
     setIsAdmin(userIsAdmin);
