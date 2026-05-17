@@ -9,8 +9,10 @@ export function getAuthToken() {
 export function setAuthToken(token, rememberMe) {
   if (rememberMe) {
     localStorage.setItem("authToken", token);
+    console.log("✅ Token saved to localStorage:", token.substring(0, 20) + "...");
   } else {
     sessionStorage.setItem("authToken", token);
+    console.log("✅ Token saved to sessionStorage:", token.substring(0, 20) + "...");
   }
 }
 

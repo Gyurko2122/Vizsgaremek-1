@@ -70,10 +70,12 @@ function App() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        console.log("🔍 Verify-token response:", res.status);
         if (!res.ok) throw new Error("Invalid token");
         return res.json();
       })
       .then((data) => {
+        console.log("✅ Token is valid:", data);
         if (data.valid) {
           setIsLoggedIn(true);
           setUsername(data.username);
@@ -87,7 +89,8 @@ function App() {
           throw new Error("Token invalid");
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("❌ Token verification failed:", err);
         // Érvénytelen token — teljes kijelentkeztetés
         clearAuthToken();
         localStorage.removeItem("isLoggedIn");
