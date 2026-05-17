@@ -78,6 +78,11 @@ function App() {
           setIsLoggedIn(true);
           setUsername(data.username);
           setIsAdmin(data.isAdmin || false);
+          // Frissítsd a loginTime-ot, hogy ne legyen logout 20 perc után az oldal frissítéskor
+          const rememberMe = localStorage.getItem("rememberMe") === "true";
+          if (!rememberMe) {
+            sessionStorage.setItem("loginTime", Date.now().toString());
+          }
         } else {
           throw new Error("Token invalid");
         }
