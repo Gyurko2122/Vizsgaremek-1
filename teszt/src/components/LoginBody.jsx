@@ -28,6 +28,7 @@ export default function LoginBody({ onRegisterClick, onLoginSuccess }) {
           data.username,
           rememberMe,
           data.isAdmin || false,
+          data.token,
         );
       } else if (response.status === 403 && data.suspendedUntil) {
         alert(`${data.message}\nOk: ${data.reason}`);
